@@ -1,0 +1,42 @@
+// Pet types and customer-owned pets
+
+model PetType {
+  id        Int          @id @default(autoincrement())
+  name      String       @db.VarChar(50)
+  slug      String       @unique @db.VarChar(60)
+  icon      String?      @db.VarChar(50)
+  status    ActiveStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  pets         Pet[]
+  services     ServicePetType[]
+  adoptionPets AdoptionPet[]
+
+  @@map("pet_types")
+}
+
+model Pet {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  petTypeId    Int       @map("pet_type_id")
+  name         String    @db.VarChar(100)
+  breed        String?   @db.VarChar(100)
+  gender       Gender?
+  size         PetSize?
+  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  weightKg     Decimal?  @map("weight_kg") @db.Decimal(5, 2)
+  isVaccinated Boolean   @default(false) @map("is_vaccinated")
+  photo        String?   @db.VarChar(255)
+  notes        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petType  PetType   @relation(fields: [petTypeId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  @@index([userId])
+  @@map("pets")
+}

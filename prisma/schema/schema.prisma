@@ -1,0 +1,14 @@
+// ─────────────────────────────────────────────────────────────
+//  Entry file. Prisma merges every *.prisma file in this folder.
+//  Models live in module-wise files (users.prisma, services.prisma …)
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../../generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}

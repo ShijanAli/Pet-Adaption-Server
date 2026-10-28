@@ -1,0 +1,71 @@
+// Promotions / coupons
+
+model Promotion {
+  id                Int            @id @default(autoincrement())
+  title             String         @db.VarChar(150)
+  code              String?        @unique @db.VarChar(50)
+  description       String?
+  discountType      DiscountType   @map("discount_type")
+  discountValue     Decimal        @map("discount_value") @db.Decimal(10, 2)
+  maxDiscountAmount Decimal?       @map("max_discount_amount") @db.Decimal(10, 2)
+  minOrderAmount    Decimal?       @map("min_order_amount") @db.Decimal(10, 2)
+  appliesTo         PromotionScope @default(all) @map("applies_to")
+  usageLimit        Int?           @map("usage_limit")
+  perUserLimit      Int            @default(1) @map("per_user_limit")
+  usedCount         Int            @default(0) @map("used_count")
+  startsAt          DateTime       @map("starts_at")
+  endsAt            DateTime       @map("ends_at")
+  bannerImage       String?        @map("banner_image") @db.VarChar(255)
+  status            ActiveStatus   @default(active)
+  createdById       Int?           @map("created_by")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  createdBy User? @relation("PromotionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  services   PromotionService[]
+  categories PromotionCategory[]
+  usages     PromotionUsage[]
+  bookings   Booking[]
+
+  @@index([status, startsAt, endsAt])
+  @@map("promotions")
+}
+
+model PromotionService {
+  promotionId Int @map("promotion_id")
+  serviceId   Int @map("service_id")
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  service   Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, serviceId])
+  @@map("promotion_services")
+}
+
+model PromotionCategory {
+  promotionId Int @map("promotion_id")
+  categoryId  Int @map("category_id")
+
+  promotion Promotion       @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  category  ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, categoryId])
+  @@map("promotion_categories")
+}
+
+model PromotionUsage {
+  id             Int      @id @default(autoincrement())
+  promotionId    Int      @map("promotion_id")
+  userId         Int      @map("user_id")
+  bookingId      Int      @map("booking_id")
+  discountAmount Decimal  @map("discount_amount") @db.Decimal(10, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([promotionId, userId])
+  @@map("promotion_usages")
+}

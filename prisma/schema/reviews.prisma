@@ -1,0 +1,38 @@
+// Service reviews (one per completed booking)
+
+model Review {
+  id         Int          @id @default(autoincrement())
+  bookingId  Int          @unique @map("booking_id")
+  userId     Int          @map("user_id")
+  serviceId  Int          @map("service_id")
+  rating     Int          @db.SmallInt
+  title      String?      @db.VarChar(150)
+  comment    String?
+  status     ReviewStatus @default(pending)
+  adminReply String?      @map("admin_reply")
+  repliedAt  DateTime?    @map("replied_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  images ReviewImage[]
+
+  @@index([serviceId, status])
+  @@map("reviews")
+}
+
+model ReviewImage {
+  id        Int      @id @default(autoincrement())
+  reviewId  Int      @map("review_id")
+  image     String   @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_images")
+}

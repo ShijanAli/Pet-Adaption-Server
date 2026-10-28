@@ -1,0 +1,44 @@
+// Gallery albums and items
+
+model GalleryAlbum {
+  id          Int          @id @default(autoincrement())
+  title       String       @db.VarChar(150)
+  slug        String       @unique @db.VarChar(170)
+  description String?
+  coverImage  String?      @map("cover_image") @db.VarChar(255)
+  sortOrder   Int          @default(0) @map("sort_order")
+  status      ActiveStatus @default(active)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  items GalleryItem[]
+
+  @@map("gallery_albums")
+}
+
+model GalleryItem {
+  id             Int          @id @default(autoincrement())
+  albumId        Int?         @map("album_id")
+  serviceId      Int?         @map("service_id")
+  title          String?      @db.VarChar(150)
+  caption        String?
+  mediaType      MediaType    @default(image) @map("media_type")
+  fileUrl        String       @map("file_url") @db.VarChar(255)
+  thumbnailUrl   String?      @map("thumbnail_url") @db.VarChar(255)
+  beforeImageUrl String?      @map("before_image_url") @db.VarChar(255)
+  altText        String?      @map("alt_text") @db.VarChar(255)
+  isFeatured     Boolean      @default(false) @map("is_featured")
+  sortOrder      Int          @default(0) @map("sort_order")
+  status         ActiveStatus @default(active)
+  uploadedById   Int?         @map("uploaded_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  album      GalleryAlbum? @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  service    Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  uploadedBy User?         @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([albumId])
+  @@index([serviceId])
+  @@map("gallery_items")
+}

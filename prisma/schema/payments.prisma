@@ -1,0 +1,42 @@
+// Payments for bookings and adoptions (one of booking_id / adoption_id is required)
+
+model Payment {
+  id              Int               @id @default(autoincrement())
+  userId          Int               @map("user_id")
+  bookingId       Int?              @map("booking_id")
+  adoptionId      Int?              @map("adoption_id")
+  // amount in the currency the customer paid with
+  amount          Decimal           @db.Decimal(10, 2)
+  currency        Currency          @default(BDT)
+  // 1 unit of `currency` = exchange_rate BDT (1 for BDT)
+  exchangeRate    Decimal           @default(1) @map("exchange_rate") @db.Decimal(12, 4)
+  // same amount converted to base currency for reporting
+  baseAmount      Decimal           @map("base_amount") @db.Decimal(10, 2)
+  method          PaymentMethod
+  gateway         String?           @db.VarChar(50)
+  transactionId   String            @unique @map("transaction_id") @db.VarChar(100)
+  valId           String?           @map("val_id") @db.VarChar(100)
+  bankTranId      String?           @map("bank_tran_id") @db.VarChar(100)
+  type            PaymentType       @default(payment)
+  status          TransactionStatus @default(pending)
+  gatewayResponse Json?             @map("gateway_response")
+  // for type = refund: the original payment being refunded
+  refundOfId      Int?              @map("refund_of_id")
+  note            String?
+  paidAt          DateTime?         @map("paid_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  booking  Booking?  @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  adoption Adoption? @relation(fields: [adoptionId], references: [id], onDelete: Restrict)
+  refundOf Payment?  @relation("PaymentRefunds", fields: [refundOfId], references: [id], onDelete: Restrict)
+  refunds  Payment[] @relation("PaymentRefunds")
+
+  @@index([bookingId])
+  @@index([adoptionId])
+  @@index([userId])
+  @@index([status])
+  @@index([refundOfId])
+  @@map("payments")
+}

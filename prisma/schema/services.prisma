@@ -1,0 +1,78 @@
+// Service catalog
+
+model ServiceCategory {
+  id          Int          @id @default(autoincrement())
+  parentId    Int?         @map("parent_id")
+  name        String       @db.VarChar(100)
+  slug        String       @unique @db.VarChar(120)
+  description String?
+  icon        String?      @db.VarChar(50)
+  image       String?      @db.VarChar(255)
+  sortOrder   Int          @default(0) @map("sort_order")
+  status      ActiveStatus @default(active)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  deletedAt   DateTime?    @map("deleted_at")
+
+  parent     ServiceCategory?    @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   ServiceCategory[]   @relation("CategoryTree")
+  services   Service[]
+  promotions PromotionCategory[]
+
+  @@map("service_categories")
+}
+
+model Service {
+  id                  Int          @id @default(autoincrement())
+  categoryId          Int          @map("category_id")
+  name                String       @db.VarChar(150)
+  slug                String       @unique @db.VarChar(170)
+  shortDescription    String?      @map("short_description") @db.VarChar(255)
+  description         String?
+  // prices are stored in the base currency (BDT)
+  price               Decimal      @db.Decimal(10, 2)
+  discountPrice       Decimal?     @map("discount_price") @db.Decimal(10, 2)
+  durationMinutes     Int          @map("duration_minutes")
+  icon                String?      @db.VarChar(50)
+  image               String?      @db.VarChar(255)
+  status              ActiveStatus @default(active)
+  isFeatured          Boolean      @default(false) @map("is_featured")
+  sortOrder           Int          @default(0) @map("sort_order")
+  maxPetsPerBooking   Int          @default(1) @map("max_pets_per_booking")
+  requiresVaccination Boolean      @default(false) @map("requires_vaccination")
+  avgRating           Decimal      @default(0) @map("avg_rating") @db.Decimal(2, 1)
+  reviewsCount        Int          @default(0) @map("reviews_count")
+  createdById         Int?         @map("created_by")
+  updatedById         Int?         @map("updated_by")
+  deletedById         Int?         @map("deleted_by")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  deletedAt           DateTime?    @map("deleted_at")
+
+  category  ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy User?           @relation("ServiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?           @relation("ServiceUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy User?           @relation("ServiceDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  petTypes     ServicePetType[]
+  staff        StaffService[]
+  bookings     Booking[]
+  promotions   PromotionService[]
+  reviews      Review[]
+  galleryItems GalleryItem[]
+
+  @@index([categoryId])
+  @@index([status, isFeatured])
+  @@map("services")
+}
+
+model ServicePetType {
+  serviceId Int @map("service_id")
+  petTypeId Int @map("pet_type_id")
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  petType PetType @relation(fields: [petTypeId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, petTypeId])
+  @@map("service_pet_types")
+}

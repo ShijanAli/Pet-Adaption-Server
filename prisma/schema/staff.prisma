@@ -1,0 +1,45 @@
+// Staff ↔ services, weekly schedules, blocked dates
+
+model StaffService {
+  staffId   Int @map("staff_id")
+  serviceId Int @map("service_id")
+
+  staff   User    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([staffId, serviceId])
+  @@map("staff_services")
+}
+
+model StaffSchedule {
+  id        Int      @id @default(autoincrement())
+  staffId   Int      @map("staff_id")
+  // 0 = Sunday … 6 = Saturday
+  dayOfWeek Int      @map("day_of_week") @db.SmallInt
+  // "HH:mm" 24h format
+  startTime String   @map("start_time") @db.VarChar(5)
+  endTime   String   @map("end_time") @db.VarChar(5)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  staff User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, dayOfWeek])
+  @@map("staff_schedules")
+}
+
+model BlockedDate {
+  id        Int      @id @default(autoincrement())
+  // null => whole business is closed that day
+  staffId   Int?     @map("staff_id")
+  date      DateTime @db.Date
+  reason    String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  staff User? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@map("blocked_dates")
+}

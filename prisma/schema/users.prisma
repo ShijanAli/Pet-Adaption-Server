@@ -1,0 +1,105 @@
+// Users, addresses, notifications
+
+model User {
+  id              Int        @id @default(autoincrement())
+  roleId          Int        @map("role_id")
+  firstName       String     @map("first_name") @db.VarChar(100)
+  lastName        String     @map("last_name") @db.VarChar(100)
+  email           String     @unique @db.VarChar(150)
+  phone           String?    @db.VarChar(20)
+  password        String     @db.VarChar(255)
+  address         String?    @db.VarChar(255)
+  profilePhoto    String?    @map("profile_photo") @db.VarChar(255)
+  bio             String?
+  status          UserStatus @default(active)
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  lastLoginAt     DateTime?  @map("last_login_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  deletedAt       DateTime?  @map("deleted_at")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  refreshTokens      RefreshToken[]
+  verificationTokens VerificationToken[]
+  addresses          UserAddress[]
+  notifications      Notification[]
+  pets               Pet[]
+
+  // staff
+  staffServices  StaffService[]
+  staffSchedules StaffSchedule[]
+  blockedDates   BlockedDate[]
+
+  // bookings & payments
+  bookings          Booking[]          @relation("CustomerBookings")
+  assignedBookings  Booking[]          @relation("StaffBookings")
+  bookingStatusLogs BookingStatusLog[]
+  payments          Payment[]
+
+  // promotions & reviews
+  promotionsCreated Promotion[]      @relation("PromotionCreator")
+  promotionUsages   PromotionUsage[]
+  reviews           Review[]
+
+  // services audit
+  servicesCreated Service[] @relation("ServiceCreator")
+  servicesUpdated Service[] @relation("ServiceUpdater")
+  servicesDeleted Service[] @relation("ServiceDeleter")
+
+  // gallery
+  galleryUploads GalleryItem[]
+
+  // adoption
+  adoptionPetsCreated  AdoptionPet[]         @relation("AdoptionPetCreator")
+  adoptionApplications AdoptionApplication[] @relation("Applicant")
+  applicationsReviewed AdoptionApplication[] @relation("ApplicationReviewer")
+  adoptions            Adoption[]
+  favorites            Favorite[]
+
+  // content & system
+  blogPosts    BlogPost[]
+  testimonials Testimonial[]
+  activityLogs ActivityLog[]
+
+  @@index([roleId])
+  @@index([status])
+  @@map("users")
+}
+
+model UserAddress {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  label       String   @db.VarChar(50)
+  addressLine String   @map("address_line") @db.VarChar(255)
+  city        String   @db.VarChar(100)
+  area        String   @db.VarChar(100)
+  postalCode  String?  @map("postal_code") @db.VarChar(20)
+  lat         Decimal? @db.Decimal(10, 7)
+  lng         Decimal? @db.Decimal(10, 7)
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([userId])
+  @@map("user_addresses")
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  type      String    @db.VarChar(100)
+  title     String    @db.VarChar(150)
+  message   String
+  data      Json?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}

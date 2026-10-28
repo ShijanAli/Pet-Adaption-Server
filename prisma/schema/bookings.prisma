@@ -1,0 +1,60 @@
+// Bookings and their status history
+
+model Booking {
+  id              Int           @id @default(autoincrement())
+  bookingNo       String        @unique @map("booking_no") @db.VarChar(30)
+  userId          Int           @map("user_id")
+  petId           Int           @map("pet_id")
+  serviceId       Int           @map("service_id")
+  assignedStaffId Int?          @map("assigned_staff_id")
+  promotionId     Int?          @map("promotion_id")
+  addressId       Int?          @map("address_id")
+  bookingDate     DateTime      @map("booking_date") @db.Date
+  startTime       String        @map("start_time") @db.VarChar(5)
+  endTime         String        @map("end_time") @db.VarChar(5)
+  // amounts are snapshots in the base currency (BDT)
+  servicePrice    Decimal       @map("service_price") @db.Decimal(10, 2)
+  discountAmount  Decimal       @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+  status          BookingStatus @default(pending)
+  paymentStatus   PaymentStatus @default(unpaid) @map("payment_status")
+  customerNote    String?       @map("customer_note")
+  cancelledAt     DateTime?     @map("cancelled_at")
+  cancelReason    String?       @map("cancel_reason")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user          User         @relation("CustomerBookings", fields: [userId], references: [id], onDelete: Restrict)
+  pet           Pet          @relation(fields: [petId], references: [id], onDelete: Restrict)
+  service       Service      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  assignedStaff User?        @relation("StaffBookings", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  promotion     Promotion?   @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  address       UserAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
+  statusLogs      BookingStatusLog[]
+  payments        Payment[]
+  promotionUsages PromotionUsage[]
+  review          Review?
+
+  @@index([serviceId, bookingDate, startTime])
+  @@index([assignedStaffId, bookingDate])
+  @@index([userId])
+  @@index([status])
+  @@map("bookings")
+}
+
+model BookingStatusLog {
+  id          Int            @id @default(autoincrement())
+  bookingId   Int            @map("booking_id")
+  fromStatus  BookingStatus? @map("from_status")
+  toStatus    BookingStatus  @map("to_status")
+  changedById Int?           @map("changed_by")
+  note        String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+  @@map("booking_status_logs")
+}

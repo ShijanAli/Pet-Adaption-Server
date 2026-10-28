@@ -1,0 +1,122 @@
+// Adoption module
+
+model AdoptionPet {
+  id           Int               @id @default(autoincrement())
+  petTypeId    Int               @map("pet_type_id")
+  name         String            @db.VarChar(100)
+  slug         String            @unique @db.VarChar(120)
+  breed        String?           @db.VarChar(100)
+  gender       Gender
+  ageMonths    Int               @map("age_months")
+  size         PetSize?
+  color        String?           @db.VarChar(50)
+  description  String
+  healthStatus String?           @map("health_status")
+  isVaccinated Boolean           @default(false) @map("is_vaccinated")
+  isNeutered   Boolean           @default(false) @map("is_neutered")
+  // base currency (BDT)
+  adoptionFee  Decimal           @default(0) @map("adoption_fee") @db.Decimal(10, 2)
+  status       AdoptionPetStatus @default(available)
+  isFeatured   Boolean           @default(false) @map("is_featured")
+  createdById  Int?              @map("created_by")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  deletedAt    DateTime?         @map("deleted_at")
+
+  petType   PetType @relation(fields: [petTypeId], references: [id], onDelete: Restrict)
+  createdBy User?   @relation("AdoptionPetCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  images       AdoptionPetImage[]
+  applications AdoptionApplication[]
+  adoptions    Adoption[]
+  favorites    Favorite[]
+
+  @@index([status, petTypeId])
+  @@map("adoption_pets")
+}
+
+model AdoptionPetImage {
+  id            Int      @id @default(autoincrement())
+  adoptionPetId Int      @map("adoption_pet_id")
+  imageUrl      String   @map("image_url") @db.VarChar(255)
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  adoptionPet AdoptionPet @relation(fields: [adoptionPetId], references: [id], onDelete: Cascade)
+
+  @@index([adoptionPetId])
+  @@map("adoption_pet_images")
+}
+
+model AdoptionApplication {
+  id               Int               @id @default(autoincrement())
+  applicationNo    String            @unique @map("application_no") @db.VarChar(30)
+  adoptionPetId    Int               @map("adoption_pet_id")
+  userId           Int               @map("user_id")
+  homeType         HomeType          @map("home_type")
+  hasYard          Boolean           @default(false) @map("has_yard")
+  hasOtherPets     Boolean           @default(false) @map("has_other_pets")
+  otherPetsDetails String?           @map("other_pets_details")
+  hasChildren      Boolean           @default(false) @map("has_children")
+  experience       String?
+  reason           String
+  status           ApplicationStatus @default(pending)
+  reviewedById     Int?              @map("reviewed_by")
+  reviewedAt       DateTime?         @map("reviewed_at")
+  adminNote        String?           @map("admin_note")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  adoptionPet AdoptionPet @relation(fields: [adoptionPetId], references: [id], onDelete: Restrict)
+  user        User        @relation("Applicant", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedBy  User?       @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  adoption    Adoption?
+
+  @@index([adoptionPetId, status])
+  @@index([userId])
+  @@map("adoption_applications")
+}
+
+model Adoption {
+  id            Int       @id @default(autoincrement())
+  applicationId Int       @unique @map("application_id")
+  adoptionPetId Int       @map("adoption_pet_id")
+  userId        Int       @map("user_id")
+  status        AdoptionStatus @default(in_progress)
+  adoptionDate  DateTime  @map("adoption_date") @db.Date
+  // fee snapshot taken when the application is approved (BDT)
+  feeAmount     Decimal   @default(0) @map("fee_amount") @db.Decimal(10, 2)
+  feePaid       Decimal   @default(0) @map("fee_paid") @db.Decimal(10, 2)
+  contractFile  String?   @map("contract_file") @db.VarChar(255)
+  followUpDate  DateTime? @map("follow_up_date") @db.Date
+  completedAt   DateTime? @map("completed_at")
+  cancelledAt   DateTime? @map("cancelled_at")
+  cancelReason  String?   @map("cancel_reason")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  application  AdoptionApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  adoptionPet  AdoptionPet         @relation(fields: [adoptionPetId], references: [id], onDelete: Restrict)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  payments     Payment[]
+  testimonials Testimonial[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("adoptions")
+}
+
+model Favorite {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  adoptionPetId Int      @map("adoption_pet_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adoptionPet AdoptionPet @relation(fields: [adoptionPetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, adoptionPetId])
+  @@map("favorites")
+}

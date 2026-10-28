@@ -1,0 +1,133 @@
+// Shared enums used across modules
+
+enum ActiveStatus {
+  active
+  inactive
+}
+
+enum UserStatus {
+  active
+  inactive
+  blocked
+}
+
+enum Currency {
+  BDT
+  USD
+}
+
+enum Gender {
+  male
+  female
+}
+
+enum PetSize {
+  small
+  medium
+  large
+}
+
+enum TokenType {
+  email_verify
+  password_reset
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  in_progress
+  completed
+  cancelled
+  no_show
+}
+
+enum PaymentStatus {
+  unpaid
+  partial
+  paid
+  refunded
+}
+
+enum PaymentMethod {
+  cash
+  card
+  mobile_banking
+  sslcommerz
+}
+
+enum PaymentType {
+  payment
+  refund
+}
+
+enum TransactionStatus {
+  pending
+  success
+  failed
+  cancelled
+  refunded
+}
+
+enum DiscountType {
+  percentage
+  fixed
+}
+
+enum PromotionScope {
+  all
+  specific_services
+  specific_categories
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+enum MediaType {
+  image
+  video
+}
+
+enum AdoptionPetStatus {
+  available
+  pending
+  adopted
+  on_hold
+}
+
+enum HomeType {
+  house
+  apartment
+}
+
+enum ApplicationStatus {
+  pending
+  under_review
+  approved
+  rejected
+  cancelled
+}
+
+enum AdoptionStatus {
+  in_progress
+  completed
+  cancelled
+}
+
+enum PostStatus {
+  draft
+  published
+}
+
+enum ContactStatus {
+  new
+  read
+  replied
+}
+
+enum SubscriptionStatus {
+  subscribed
+  unsubscribed
+}

@@ -1,0 +1,94 @@
+// Blog, testimonials, FAQ, contact, newsletter
+
+model BlogCategory {
+  id        Int          @id @default(autoincrement())
+  name      String       @db.VarChar(100)
+  slug      String       @unique @db.VarChar(120)
+  status    ActiveStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  posts BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogPost {
+  id              Int        @id @default(autoincrement())
+  categoryId      Int        @map("category_id")
+  authorId        Int?       @map("author_id")
+  title           String     @db.VarChar(200)
+  slug            String     @unique @db.VarChar(220)
+  excerpt         String?    @db.VarChar(300)
+  content         String
+  coverImage      String?    @map("cover_image") @db.VarChar(255)
+  status          PostStatus @default(draft)
+  publishedAt     DateTime?  @map("published_at")
+  metaTitle       String?    @map("meta_title") @db.VarChar(200)
+  metaDescription String?    @map("meta_description") @db.VarChar(300)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  deletedAt       DateTime?  @map("deleted_at")
+
+  category BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  author   User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+  @@map("blog_posts")
+}
+
+model Testimonial {
+  id         Int          @id @default(autoincrement())
+  userId     Int?         @map("user_id")
+  adoptionId Int?         @map("adoption_id")
+  name       String       @db.VarChar(100)
+  content    String
+  image      String?      @db.VarChar(255)
+  rating     Int          @default(5) @db.SmallInt
+  isFeatured Boolean      @default(false) @map("is_featured")
+  status     ActiveStatus @default(active)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  adoption Adoption? @relation(fields: [adoptionId], references: [id], onDelete: SetNull)
+
+  @@map("testimonials")
+}
+
+model Faq {
+  id        Int          @id @default(autoincrement())
+  question  String       @db.VarChar(255)
+  answer    String
+  category  String?      @db.VarChar(50)
+  sortOrder Int          @default(0) @map("sort_order")
+  status    ActiveStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@map("faqs")
+}
+
+model ContactMessage {
+  id        Int           @id @default(autoincrement())
+  name      String        @db.VarChar(100)
+  email     String        @db.VarChar(150)
+  phone     String?       @db.VarChar(20)
+  subject   String        @db.VarChar(200)
+  message   String
+  status    ContactStatus @default(new)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@map("contact_messages")
+}
+
+model NewsletterSubscriber {
+  id             Int                @id @default(autoincrement())
+  email          String             @unique @db.VarChar(150)
+  status         SubscriptionStatus @default(subscribed)
+  subscribedAt   DateTime           @default(now()) @map("subscribed_at")
+  unsubscribedAt DateTime?          @map("unsubscribed_at")
+
+  @@map("newsletter_subscribers")
+}
