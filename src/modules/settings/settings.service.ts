@@ -18,15 +18,40 @@ export const SettingService = {
       where: { isPublic: true },
       orderBy: { key: 'asc' },
     });
-    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    // a setting added in a newer release works before `db:seed` has run: its default is served
+    const defaults = Object.entries(SETTING_DEFINITIONS)
+      .filter(([, def]) => def.isPublic)
+      .map(([key, def]) => [key, def.default] as const);
+    return {
+      ...Object.fromEntries(defaults),
+      ...Object.fromEntries(rows.map((r) => [r.key, r.value])),
+    };
   },
 
   async getAll(group?: string) {
-    const rows = await prisma.setting.findMany({
-      where: group ? { group } : undefined,
-      orderBy: [{ group: 'asc' }, { key: 'asc' }],
-    });
-    return rows.map((r) => ({ ...r, ...describe(r.key) }));
+    const rows = (
+      await prisma.setting.findMany({
+        where: group ? { group } : undefined,
+        orderBy: [{ group: 'asc' }, { key: 'asc' }],
+      })
+    )
+      // "__"-prefixed rows are internal (e.g. the demo seeder's manifest). Filtered here, not in SQL:
+      // Prisma's startsWith becomes LIKE, where "_" is a wildcard.
+      .filter((r) => !r.key.startsWith('__'));
+    const stored = new Set(rows.map((r) => r.key));
+    // definitions without a row yet (new setting, seed not run) still show up with their default
+    const missing = Object.entries(SETTING_DEFINITIONS)
+      .filter(([key, def]) => !stored.has(key) && (!group || def.group === group))
+      .map(([key, def]) => ({
+        id: null,
+        key,
+        value: def.default,
+        group: def.group,
+        isPublic: def.isPublic,
+        createdAt: null,
+        updatedAt: null,
+      }));
+    return [...rows, ...missing].map((r) => ({ ...r, ...describe(r.key) }));
   },
 
   /** Validates every value against its definition, then saves them all or nothing */

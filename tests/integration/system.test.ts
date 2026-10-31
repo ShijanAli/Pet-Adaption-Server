@@ -19,6 +19,68 @@ describe('Settings', () => {
     expect(res.body.data.admin_notification_email).toBeUndefined();
   });
 
+  it('serves the default opening hours even before a row exists, and validates edits', async () => {
+    await prisma.setting.deleteMany({ where: { key: 'opening_hours' } });
+    const pub = await api().get(`${API}/settings/public`).expect(200);
+    expect(pub.body.data.opening_hours).toHaveLength(7);
+    expect(pub.body.data.opening_hours[1]).toEqual({
+      day: 1,
+      open: true,
+      opens: '08:00',
+      closes: '19:00',
+    });
+
+    const all = await api().get(`${API}/settings`).set(bearer(admin)).expect(200);
+    expect(
+      all.body.data.find((s: { key: string }) => s.key === 'opening_hours')?.value,
+    ).toHaveLength(7);
+    // internal rows stay hidden, real rows keep their stored values
+    await prisma.setting.upsert({
+      where: { key: '__internal' },
+      update: {},
+      create: { key: '__internal', value: 1 },
+    });
+    const keys = (await api().get(`${API}/settings`).set(bearer(admin)).expect(200)).body.data.map(
+      (s: { key: string }) => s.key,
+    );
+    expect(keys).not.toContain('__internal');
+    expect(keys).toContain('site_name');
+    await prisma.setting.delete({ where: { key: '__internal' } });
+
+    const week = pub.body.data.opening_hours.map((d: { day: number }) => ({
+      ...d,
+      open: d.day !== 5,
+    }));
+    const bad = await api()
+      .patch(`${API}/settings`)
+      .set(bearer(admin))
+      .send({
+        values: {
+          opening_hours: week.map((d: object, i: number) =>
+            i === 2 ? { ...d, opens: '18:00', closes: '09:00' } : d,
+          ),
+        },
+      })
+      .expect(422);
+    expect(bad.body.errors[0]).toMatchObject({
+      path: 'values.opening_hours',
+      message: 'Closing time must be after opening time',
+    });
+    await api()
+      .patch(`${API}/settings`)
+      .set(bearer(admin))
+      .send({ values: { opening_hours: week.slice(1) } })
+      .expect(422);
+
+    await api()
+      .patch(`${API}/settings`)
+      .set(bearer(admin))
+      .send({ values: { opening_hours: week } })
+      .expect(200);
+    const after = await api().get(`${API}/settings/public`).expect(200);
+    expect(after.body.data.opening_hours[5].open).toBe(false);
+  });
+
   it('validates every value and saves all-or-nothing', async () => {
     const bad = await api()
       .patch(`${API}/settings`)

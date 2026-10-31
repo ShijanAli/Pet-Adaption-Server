@@ -34,9 +34,33 @@ docker compose up -d           # Postgres with pet_adoption + pet_adoption_test 
 
 npx prisma migrate dev --name init
 npm run db:seed                # permissions, roles, super admin, pet types, settings
+npm run db:seed:demo           # optional: realistic demo data (see "Demo data" below)
 
 npm run dev
 ```
+
+### Demo data
+
+`npm run db:seed:demo` fills an empty or development database with ~4 months of realistic history in a few seconds:
+1 manager, 6 staff (with schedules and skills), 42 customers with ~60 pets, 15 services in 6 categories, ~450 bookings
+(completed / cancelled / no-show / upcoming, with status logs), ~400 payments and 20 refunds (net revenue trending up
+month to month), ~160 reviews with replies, 4 promotions with usage, 23 adoptable pets with applications, adoptions,
+fees and favourites, plus blog posts, FAQs, testimonials, gallery albums, contact messages, newsletter subscribers,
+notifications and holidays.
+
+| Command                            | What it does                                               |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `npm run db:seed:demo`             | Add demo data (runs the base seed first; no-op if present) |
+| `npm run db:seed:demo -- --reset`  | Remove the previous demo data, then add it again           |
+| `npm run db:seed:demo -- --remove` | Remove only the demo data                                  |
+
+- Sign in with `manager@demo.petplex.dev` (admin), `jessica.rozario@demo.petplex.dev` (staff) or any customer printed at the end — password `Demo@1234`.
+- All demo emails use `@demo.petplex.dev`, so no email ever reaches a real inbox.
+- Everything created is recorded in the internal `__demo_seed` settings row; `--reset` / `--remove` delete exactly that.
+  Your own data is never touched — a demo service your real customers booked is deactivated instead of deleted.
+- Photos come from the frontend's `/public/images` via `${CLIENT_URL}/images` (override with `DEMO_IMAGE_BASE_URL`).
+- Data is generated with a fixed random seed, so every run produces the same story relative to today's date.
+- Refuses to run when `NODE_ENV=production` unless you pass `--force`.
 
 | URL                                             | What                                                                              |
 | ----------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -95,6 +119,7 @@ Business settings (exchange rate, booking rules, contact info …) live in the `
 | `npm run build`                                              | Bundle `dist/server.js` + `dist/seed.js` (tsup)          |
 | `npm start` / `npm run start:prod`                           | Run the bundle / apply migrations, then run              |
 | `npm run db:seed` / `npm run db:seed:prod`                   | Seed with tsx / with the compiled bundle (idempotent)    |
+| `npm run db:seed:demo` (`-- --reset` / `-- --remove`)        | Realistic demo data for development and demos            |
 | `npm run prisma:migrate` / `prisma:deploy` / `prisma:studio` | Prisma helpers                                           |
 | `npm test` / `npm run test:coverage`                         | Tests (wipes `TEST_DATABASE_URL`) / with coverage report |
 | `npm run check`                                              | typecheck + lint + tests                                 |

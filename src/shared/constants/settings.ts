@@ -13,6 +13,27 @@ type Definition<T extends z.ZodType> = {
 
 const define = <T extends z.ZodType>(d: Definition<T>) => d;
 
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm (24-hour)');
+
+/** One entry per weekday (0 = Sunday … 6 = Saturday), Asia/Dhaka local time. */
+const openingHoursSchema = z
+  .array(z.object({ day: z.number().int().min(0).max(6), open: z.boolean(), opens: hhmm, closes: hhmm }).strict())
+  .length(7, 'Send all 7 days')
+  .superRefine((days, ctx) => {
+    if (new Set(days.map((d) => d.day)).size !== 7) {
+      ctx.addIssue({ code: 'custom', message: 'Each weekday must appear exactly once' });
+    }
+    days.forEach((d, i) => {
+      if (d.open && d.closes <= d.opens) {
+        ctx.addIssue({ code: 'custom', path: [i, 'closes'], message: 'Closing time must be after opening time' });
+      }
+    });
+  });
+
+const DEFAULT_OPENING_HOURS = [0, 1, 2, 3, 4, 5, 6].map((day) =>
+  day === 0 ? { day, open: true, opens: '09:00', closes: '17:00' } : { day, open: true, opens: '08:00', closes: '19:00' },
+);
+
 /**
  * Every setting the app understands — single source of truth for
  * defaults (seed), validation (PATCH /settings) and typed reads (settingsService).
@@ -45,6 +66,13 @@ export const SETTING_DEFINITIONS = {
     group: 'general',
     isPublic: true,
     description: 'Shop address',
+  }),
+  opening_hours: define({
+    schema: openingHoursSchema,
+    default: DEFAULT_OPENING_HOURS,
+    group: 'general',
+    isPublic: true,
+    description: 'Weekly opening hours shown on the website (booking slots follow staff schedules)',
   }),
   social_links: define({
     schema: z
