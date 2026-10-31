@@ -55,6 +55,8 @@ const envSchema = z.object({
   SSLCOMMERZ_IS_LIVE: z.stringbool().default(false),
 
   JOBS_ENABLED: z.stringbool().default(true),
+  // Protects GET /cron/jobs (Vercel Cron sends it as a Bearer token). Unset => route disabled
+  CRON_SECRET: optionalString,
 
   SEED_SUPER_ADMIN_EMAIL: z.email().default('superadmin@petadoption.com'),
   SEED_SUPER_ADMIN_PASSWORD: z.string().min(8).default('SuperAdmin@123'),

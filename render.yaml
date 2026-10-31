@@ -1,0 +1,43 @@
+# Render Blueprint — Dashboard → New → Blueprint → pick this repo.
+# Uses the Dockerfile (migrations run automatically on start).
+services:
+  - type: web
+    name: pet-adoption-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: EMAIL_DRY_RUN
+        value: "false"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      # sync: false => Render asks for these values when you create the Blueprint
+      - key: DATABASE_URL
+        sync: false
+      - key: SERVER_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: CLIENT_URLS
+        sync: false
+      - key: EMAIL_FROM_ADDRESS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SSLCOMMERZ_STORE_ID
+        sync: false
+      - key: SSLCOMMERZ_STORE_PASSWORD
+        sync: false

@@ -4,13 +4,15 @@ import helmet from 'helmet';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { pinoHttp } from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
 import { env } from '@/config/env';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { apiRouter } from '@/routes';
+import { JOBS } from '@/jobs';
+import { runExclusive } from '@/jobs/scheduler';
 import { buildOpenApiDocument } from '@/docs/openapi';
 import { globalLimiter } from '@/shared/middlewares/rateLimiter';
 import { errorHandler, notFoundHandler } from '@/shared/middlewares/errorHandler';
@@ -60,6 +62,29 @@ export const createApp = (): Express => {
     await prisma.$queryRaw`SELECT 1`;
     sendResponse(res, { message: 'OK', data: { uptime: process.uptime() } });
   });
+
+  // Lets an external cron run the jobs (e.g. when a free-tier server is asleep).
+  // The cron service calls this with `Authorization: Bearer <CRON_SECRET>`.
+  if (env.CRON_SECRET) {
+    const expected = Buffer.from(`Bearer ${env.CRON_SECRET}`);
+    app.get('/cron/jobs', async (req, res) => {
+      const given = Buffer.from(req.headers.authorization ?? '');
+      if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+      const results: Record<string, unknown> = {};
+      for (const job of JOBS) {
+        try {
+          results[job.name] = await runExclusive(job);
+        } catch (err) {
+          logger.error({ err, job: job.name }, 'Job failed');
+          results[job.name] = { error: true };
+        }
+      }
+      sendResponse(res, { message: 'Jobs finished', data: results });
+    });
+  }
 
   app.use(env.API_PREFIX, globalLimiter, apiRouter);
 
