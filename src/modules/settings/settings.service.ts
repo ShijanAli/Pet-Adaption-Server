@@ -12,7 +12,7 @@ const describe = (key: string) => {
 };
 
 export const SettingService = {
-  /** `{ site_name: '…', usd_exchange_rate: 122, … }` — safe for the public site */
+  /** `{ site_name: '…', booking_cancel_before_hours: 24, … }` — safe for the public site */
   async getPublic() {
     const rows = await prisma.setting.findMany({
       where: { isPublic: true },

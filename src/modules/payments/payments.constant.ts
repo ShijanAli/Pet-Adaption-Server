@@ -10,9 +10,6 @@ export const PAYABLE_BOOKING_STATUSES = [
   'completed',
 ] as const;
 
-/** SSLCommerz validation statuses that mean "money received" */
-export const GATEWAY_VALID_STATUSES = ['VALID', 'VALIDATED'];
-
 export const paymentInclude = {
   booking: { select: { id: true, bookingNo: true, status: true, totalAmount: true } },
   adoption: {

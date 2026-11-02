@@ -527,7 +527,7 @@ async function createDemo() {
       by: number | null;
       note?: string;
     }[];
-    _pay?: { method: PaymentMethod; at: Date; refundAt?: Date };
+    _pay?: { method: PaymentMethod; at: Date };
     _promo?: { id: number; amount: number };
     _svc: Svc;
   };
@@ -579,8 +579,8 @@ async function createDemo() {
 
       const startTime = toTime(slot.s);
       const endTime = toTime(Math.min(slot.s + svc.minutes, 23 * 60 + 59));
-      // Unpaid "pending" bookings are auto-cancelled by the API after booking_payment_timeout_minutes,
-      // so only a few just-made ones are pending; everything else upcoming is confirmed.
+      // Staff confirm new bookings, so only a few just-made ones are still pending;
+      // everything else upcoming is confirmed. Payment is taken at the counter after the visit.
       const fresh = offset > 1 && freshPending < 3 && chance(0.3);
       if (fresh) freshPending++;
       const createdAt = fresh
@@ -610,13 +610,10 @@ async function createDemo() {
       else if (startAt < NOW) status = 'in_progress';
       else status = fresh ? 'pending' : 'confirmed';
 
-      const online = chance(0.5);
-      const method: PaymentMethod = online
-        ? 'sslcommerz'
-        : weighted(
-            ['cash', 'mobile_banking', 'card'] as const,
-            (x) => ({ cash: 5, mobile_banking: 4, card: 2 })[x],
-          );
+      const method: PaymentMethod = weighted(
+        ['cash', 'mobile_banking', 'card'] as const,
+        (x) => ({ cash: 5, mobile_banking: 4, card: 2 })[x],
+      );
       let paymentStatus: PaymentStatus = 'unpaid';
       let pay: Plan['_pay'];
       const cancelledAt =
@@ -625,17 +622,7 @@ async function createDemo() {
           : null;
       if (status === 'completed') {
         paymentStatus = 'paid';
-        pay = { method, at: online ? new Date(createdAt.getTime() + 5 * 60_000) : endAt };
-      } else if (online && status !== 'pending') {
-        // paid online at checkout; cancelled → refunded
-        paymentStatus = status === 'cancelled' ? 'refunded' : 'paid';
-        pay = {
-          method: 'sslcommerz',
-          at: new Date(createdAt.getTime() + 5 * 60_000),
-          ...(status === 'cancelled' && {
-            refundAt: clampPast(new Date(cancelledAt!.getTime() + 3_600_000)),
-          }),
-        };
+        pay = { method, at: endAt };
       }
 
       const by = slot.staffId;
@@ -739,66 +726,24 @@ async function createDemo() {
     });
   }
 
-  const paymentRow = (b: (typeof withId)[number]) => {
-    const online = b._pay!.method === 'sslcommerz';
-    return {
-      userId: b.userId,
-      bookingId: b.id,
-      amount: b.totalAmount,
-      baseAmount: b.totalAmount,
-      currency: 'BDT' as const,
-      exchangeRate: 1,
-      method: b._pay!.method,
-      gateway: online ? 'sslcommerz' : null,
-      transactionId: ref(online ? 'TXN' : 'CASH', b._pay!.at),
-      valId: online ? `VAL${hex(10)}` : null,
-      bankTranId: online ? `BTX${hex(10)}` : null,
-      type: 'payment' as const,
-      status: b._pay!.refundAt ? ('refunded' as const) : ('success' as const),
-      gatewayResponse: online
-        ? {
-            card_type: pick([
-              'BKASH-BKash',
-              'NAGAD-Nagad',
-              'VISA-Dutch Bangla',
-              'MASTER-City Bank',
-            ]),
-            status: 'VALID',
-          }
-        : undefined,
-      note: online ? null : 'Paid at the counter',
-      paidAt: b._pay!.at,
-      createdAt: b._pay!.at,
-      updatedAt: b._pay!.refundAt ?? b._pay!.at,
-    };
-  };
+  const paymentRow = (b: (typeof withId)[number]) => ({
+    userId: b.userId,
+    bookingId: b.id,
+    amount: b.totalAmount,
+    baseAmount: b.totalAmount,
+    currency: 'BDT' as const,
+    exchangeRate: 1,
+    method: b._pay!.method,
+    transactionId: ref('CASH', b._pay!.at),
+    type: 'payment' as const,
+    status: 'success' as const,
+    note: 'Paid at the counter',
+    paidAt: b._pay!.at,
+    createdAt: b._pay!.at,
+    updatedAt: b._pay!.at,
+  });
   const payable = withId.filter((b) => b._pay);
-  const payments = await prisma.payment.createManyAndReturn({
-    data: payable.map(paymentRow),
-    select: { id: true, bookingId: true },
-  });
-  const paymentOf = new Map(payments.map((p) => [p.bookingId!, p.id]));
-  await prisma.payment.createMany({
-    data: payable
-      .filter((b) => b._pay!.refundAt)
-      .map((b) => ({
-        userId: b.userId,
-        bookingId: b.id,
-        amount: b.totalAmount,
-        baseAmount: b.totalAmount,
-        currency: 'BDT' as const,
-        exchangeRate: 1,
-        method: 'sslcommerz' as const,
-        gateway: 'sslcommerz',
-        transactionId: ref('RF', b._pay!.refundAt!),
-        type: 'refund' as const,
-        status: 'success' as const,
-        refundOfId: paymentOf.get(b.id)!,
-        note: 'Booking cancelled in time — full refund',
-        paidAt: b._pay!.refundAt!,
-        createdAt: b._pay!.refundAt!,
-      })),
-  });
+  await prisma.payment.createMany({ data: payable.map(paymentRow) });
 
   // reviews: ~45% of completed visits; recent ones may still wait for moderation
   const reviewRows: Prisma.ReviewCreateManyInput[] = [];
@@ -966,7 +911,6 @@ async function createDemo() {
       });
       if (p.def.name === 'Toby') toby = adoption.id;
       if (done && p.def.fee > 0) {
-        const online = chance(0.5);
         adoptionPayments.push({
           userId: app.userId,
           adoptionId: adoption.id,
@@ -974,9 +918,8 @@ async function createDemo() {
           baseAmount: p.def.fee,
           currency: 'BDT',
           exchangeRate: 1,
-          method: online ? 'sslcommerz' : 'cash',
-          gateway: online ? 'sslcommerz' : null,
-          transactionId: ref(online ? 'TXN' : 'CASH', adoptionDate),
+          method: 'cash',
+          transactionId: ref('CASH', adoptionDate),
           type: 'payment',
           status: 'success',
           note: 'Adoption fee',
@@ -1187,7 +1130,7 @@ async function createDemo() {
 
   const count = (s: BookingStatus) => withId.filter((b) => b.status === s).length;
   const revenue =
-    payable.filter((b) => !b._pay!.refundAt).reduce((s, b) => s + Number(b.totalAmount), 0) +
+    payable.reduce((s, b) => s + Number(b.totalAmount), 0) +
     adoptionPayments.reduce((s, p) => s + Number(p.amount), 0);
   console.log(`
 ✅ Demo data ready
@@ -1195,7 +1138,7 @@ async function createDemo() {
    Catalog      : ${m.categories.length} categories, ${m.services.length} services, ${m.promotions.length} promotions
    Customer pets: ${pets.length}
    Bookings     : ${withId.length} (${count('completed')} completed, ${count('cancelled')} cancelled, ${count('no_show')} no-show, ${count('confirmed') + count('pending') + count('in_progress')} upcoming/today)
-   Payments     : ${payable.length + adoptionPayments.length} (+ ${payable.filter((b) => b._pay!.refundAt).length} refunds) · net ৳${revenue.toLocaleString('en-IN')}
+   Payments     : ${payable.length + adoptionPayments.length} · total ৳${revenue.toLocaleString('en-IN')}
    Reviews      : ${reviews.length}
    Adoption     : ${adoptionPets.length} pets, ${adoptionPayments.length} paid adoptions, ${favs.size} favourites
    Content      : ${m.blogPosts.length} posts, ${m.faqs.length} FAQs, ${m.testimonials.length} testimonials, ${m.galleryItems.length} gallery items

@@ -3,7 +3,7 @@
 Production-ready REST API for a pet adoption + pet care services platform.
 
 **Stack:** Node 22 · Express 5 · TypeScript (strict) · Prisma 7 · PostgreSQL · Zod 4 · JWT · Brevo · Cloudinary ·
-SSLCommerz · Vitest + Supertest
+Vitest + Supertest
 
 **In numbers:** 30 modules · 185 endpoints · 40 tables · 149 tests (~96 % line coverage)
 
@@ -29,7 +29,7 @@ SSLCommerz · Vitest + Supertest
 
 ```bash
 npm install                    # also runs `prisma generate`
-cp .env.example .env           # fill in Brevo / Cloudinary / SSLCommerz keys when ready
+cp .env.example .env           # fill in Brevo / Cloudinary keys when ready
 docker compose up -d           # Postgres with pet_adoption + pet_adoption_test databases
 
 npx prisma migrate dev --name init
@@ -43,7 +43,7 @@ npm run dev
 
 `npm run db:seed:demo` fills an empty or development database with ~4 months of realistic history in a few seconds:
 1 manager, 6 staff (with schedules and skills), 42 customers with ~60 pets, 15 services in 6 categories, ~450 bookings
-(completed / cancelled / no-show / upcoming, with status logs), ~400 payments and 20 refunds (net revenue trending up
+(completed / cancelled / no-show / upcoming, with status logs), ~400 counter payments (revenue trending up
 month to month), ~160 reviews with replies, 4 promotions with usage, 23 adoptable pets with applications, adoptions,
 fees and favourites, plus blog posts, FAQs, testimonials, gallery albums, contact messages, newsletter subscribers,
 notifications and holidays.
@@ -87,8 +87,8 @@ All variables are validated with zod at startup (`src/config/env.ts`) — the ap
 | `NODE_ENV`                                                                    | `development`   | `production` enables secure cross-site cookies     |
 | `PORT`                                                                        | `5000`          |                                                    |
 | `API_PREFIX`                                                                  | `/api/v1`       |                                                    |
-| `SERVER_URL`                                                                  | —               | Public backend URL (SSLCommerz callbacks, Swagger) |
-| `CLIENT_URL`                                                                  | —               | Frontend URL used in emails and payment redirects  |
+| `SERVER_URL`                                                                  | —               | Public backend URL (Swagger)                       |
+| `CLIENT_URL`                                                                  | —               | Frontend URL used in emails                       |
 | `CLIENT_URLS`                                                                 | —               | Comma separated CORS whitelist                     |
 | `BUSINESS_TIMEZONE`                                                           | `Asia/Dhaka`    | Schedules, booking times, dashboard periods        |
 | `DATABASE_URL` / `TEST_DATABASE_URL`                                          | —               | Test DB name **must contain `test`**               |
@@ -102,7 +102,6 @@ All variables are validated with zod at startup (`src/config/env.ts`) — the ap
 | `EMAIL_DRY_RUN`                                                               | `false`         | `true` = log instead of send                       |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` / `_FOLDER`              | —               | Uploads return 503 until set                       |
 | `UPLOAD_MAX_FILE_SIZE_MB`                                                     | `5`             |                                                    |
-| `SSLCOMMERZ_STORE_ID` / `_STORE_PASSWORD` / `_IS_LIVE`                        | — / — / `false` | Sandbox by default                                 |
 | `JOBS_ENABLED`                                                                | `true`          | Background jobs (see below)                        |
 | `SEED_SUPER_ADMIN_EMAIL` / `_PASSWORD`                                        | —               | Used by the seed only                              |
 
@@ -140,7 +139,7 @@ prisma/
 src/
   app.ts · server.ts
   config/env.ts                zod-validated environment
-  lib/                         prisma (soft-delete filter) · logger · brevo · cloudinary · sslcommerz
+  lib/                         prisma (soft-delete filter) · logger · brevo · cloudinary
   docs/openapi.ts              OpenAPI built from the same zod schemas used for validation
   emails/                      layout + typed templates
   jobs/                        scheduler (advisory lock) + jobs
@@ -249,7 +248,7 @@ applies instantly.
 | Identity  | Auth, Users, Roles, Permissions, Uploads (Cloudinary)                                                        |
 | Catalog   | Pet types, Service categories (2 levels), Services, Staff schedules, Blocked dates, Availability             |
 | Customers | My pets, My bookings, My payments, My favorites, My applications, My adoptions, My reviews, My notifications |
-| Commerce  | Bookings, Promotions, Payments (SSLCommerz + counter), Refunds                                               |
+| Commerce  | Bookings, Promotions, Payments (counter only — online payment is off), Refunds                    |
 | Adoption  | Adoption pets (+ images), Applications, Adoptions                                                            |
 | Content   | Reviews, Gallery, Blog, FAQs, Testimonials, Contact, Newsletter                                              |
 | System    | Settings, Activity logs, Dashboard                                                                           |
@@ -259,11 +258,8 @@ applies instantly.
 ```
 GET  /services/:id/availability?date=…        free slots (schedules, days off, existing bookings)
 POST /promotions/validate                      optional promo preview
-POST /bookings                                 pending + unpaid, least busy free staff assigned
-POST /payments/init { bookingId, currency }    → redirect to gatewayUrl (BDT or USD)
-     SSLCommerz → /payments/sslcommerz/success|fail|cancel → 303 to CLIENT_URL/payment/<result>?tranId=…&reference=…
-     SSLCommerz → /payments/sslcommerz/ipn (server-to-server)
-     verified with the SSLCommerz validation API (status, tran_id, amount, currency) → paid + confirmed + receipt
+POST /bookings                                 pending, least busy free staff assigned
+PATCH /bookings/:id/status                     staff confirm it (no online payment — customers pay at the studio)
 ```
 
 - Slot re-checked inside a **SERIALIZABLE** transaction with retry → two customers can never get the same staff
@@ -271,18 +267,18 @@ POST /payments/init { bookingId, currency }    → redirect to gatewayUrl (BDT o
 - Status workflow `pending → confirmed → in_progress → completed` (+ `cancelled`, `no_show`); staff can only update
   their own bookings.
 - Customers cancel up to `booking_cancel_before_hours` before the start; promo use is given back.
-- Unpaid bookings are auto-cancelled after `booking_payment_timeout_minutes` (job).
-- Counter payments (`/payments/cash`, partial allowed) and full / partial refunds (gateway refund API for online payments).
-
-**SSLCommerz sandbox:** create a store at <https://developer.sslcommerz.com/registration/>, set the keys, make
-`SERVER_URL` reachable (e.g. `ngrok http 5000`), and add `/payment/success|failed|cancelled` pages to the frontend.
+- **Online payment is switched off.** Bookings are never auto-cancelled for non-payment; staff confirm them.
+- Counter payments (`/payments/cash`, partial allowed) and full / partial refunds are recorded by staff.
+- Bringing an online gateway back later: add a gateway client in `src/lib`, `init` + callback routes in the payments
+  module and (optionally) an unpaid-booking expiry job — the `Payment` model already stores `gateway`, `valId`,
+  `bankTranId`, `gatewayResponse` and the USD `exchangeRate`, so no schema change is needed.
 
 ### Adoption
 
 ```
 POST  /adoption-applications                 one open application per pet per user
 PATCH /adoption-applications/:id/review      approve = pet locked + adoption record (fee snapshot) + others auto-rejected
-POST  /payments/init { adoptionId }          or POST /payments/cash { adoptionId }
+POST  /payments/cash { adoptionId }           staff record the fee paid at the counter
 PATCH /adoptions/:id/complete                needs the full fee → pet adopted
 PATCH /adoptions/:id/cancel                  only with nothing paid → pet available again
 ```
@@ -311,7 +307,6 @@ runs once at a time. Disable with `JOBS_ENABLED=false` (e.g. to run them in a se
 
 | Job                      | Every | What                                                                                                                                                              |
 | ------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `expire-unpaid-bookings` | 5 min | Cancels pending + unpaid bookings older than `booking_payment_timeout_minutes` (30; `0` = off). Skips customers who started a gateway payment in the last 15 min. |
 | `cleanup-tokens`         | 6 h   | Deletes expired refresh / verification tokens (revoked ones are kept 30 days for reuse detection)                                                                 |
 
 ---
@@ -324,7 +319,7 @@ npm run test:coverage  # coverage/ html report
 ```
 
 Integration tests run the real app with Supertest against `TEST_DATABASE_URL` (migrated, truncated and seeded once per
-run). Cloudinary and SSLCommerz are mocked; emails are captured in memory. Concurrency is tested for double bookings,
+run). Cloudinary is mocked; emails are captured in memory. Concurrency is tested for double bookings,
 double approvals and job locking.
 
 ---
@@ -356,7 +351,6 @@ Or everything locally: `docker compose --profile app up --build`.
 - [ ] HTTPS on the API (required for the cross-site refresh cookie) and the frontend origin in `CLIENT_URLS`
 - [ ] Brevo sender domain verified, `EMAIL_DRY_RUN=false`
 - [ ] Cloudinary keys set
-- [ ] SSLCommerz live store (`SSLCOMMERZ_IS_LIVE=true`) and the IPN URL configured in the merchant panel
-- [ ] `usd_exchange_rate`, contact info and `admin_notification_email` set via `PATCH /settings`
+- [ ] Contact info and `admin_notification_email` set via `PATCH /settings`
 - [ ] Database backups enabled
 - [ ] More than one instance? Move the permission / settings caches to Redis (jobs are already safe)

@@ -13,8 +13,8 @@ bookings.post(
     summary: 'Book a service',
     description:
       'Pick a free slot from `GET /services/:id/availability`. The least busy free staff member is assigned ' +
-      'unless `staffId` is given. Status starts as `pending` and becomes `confirmed` after payment ' +
-      '(or when an admin confirms it).',
+      'unless `staffId` is given. Status starts as `pending` and becomes `confirmed` ' +
+      'when staff confirm it. Payment is taken at the studio, not online.',
     access: 'auth',
     body: BookingValidation.create,
   },

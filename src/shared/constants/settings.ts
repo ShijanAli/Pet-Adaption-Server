@@ -92,21 +92,6 @@ export const SETTING_DEFINITIONS = {
     readonly: true,
     description: 'Prices are stored in this currency',
   }),
-  supported_currencies: define({
-    schema: z.array(z.enum(['BDT', 'USD'])),
-    default: ['BDT', 'USD'],
-    group: 'payment',
-    isPublic: true,
-    readonly: true,
-    description: 'Currencies customers can pay with',
-  }),
-  usd_exchange_rate: define({
-    schema: z.number().positive().max(10_000),
-    default: 122,
-    group: 'payment',
-    isPublic: true,
-    description: '1 USD = x BDT (used for USD payments)',
-  }),
   booking_slot_interval_minutes: define({
     schema: z.union([z.literal(10), z.literal(15), z.literal(20), z.literal(30), z.literal(60)]),
     default: 30,
@@ -127,13 +112,6 @@ export const SETTING_DEFINITIONS = {
     group: 'booking',
     isPublic: true,
     description: 'How many days ahead customers can book',
-  }),
-  booking_payment_timeout_minutes: define({
-    schema: z.number().int().min(0).max(1440),
-    default: 30,
-    group: 'booking',
-    isPublic: true,
-    description: 'Unpaid pending bookings are cancelled after this many minutes (0 = never)',
   }),
   admin_notification_email: define({
     schema: z.email(),

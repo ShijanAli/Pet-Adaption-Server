@@ -1,19 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-
-/* SSLCommerz mocked — every validation is "VALID" for the amount we registered */
-const gateway = vi.hoisted(() => ({ validations: new Map<string, Record<string, unknown>>() }));
-vi.mock('@/lib/sslcommerz', () => ({
-  isSslcommerzConfigured: () => true,
-  sslcommerz: {
-    initSession: vi.fn(async (input: { tranId: string }) => ({
-      gatewayUrl: `https://sandbox/pay/${input.tranId}`,
-    })),
-    validate: vi.fn(
-      async (valId: string) => gateway.validations.get(valId) ?? { status: 'INVALID_TRANSACTION' },
-    ),
-    refund: vi.fn(async () => ({ APIConnect: 'DONE', status: 'success' })),
-  },
-}));
+import { beforeAll, describe, expect, it } from 'vitest';
 
 const { prisma } = await import('@/lib/prisma');
 const { emailOutbox } = await import('@/shared/services/email.service');
@@ -89,7 +74,7 @@ describe('Applying', () => {
 });
 
 describe('Review → payment → handover', () => {
-  it('runs the full adoption with an online fee payment', async () => {
+  it('runs the full adoption with the fee paid at the counter', async () => {
     const pet = await createAdoptionPet({ adoptionFee: 2000 });
     const alice = await createAndLogin();
     const bob = await createAndLogin();
@@ -135,30 +120,18 @@ describe('Review → payment → handover', () => {
     expect(early.status).toBe(400);
     expect(early.body.message).toMatch(/due 2000/);
 
-    // Alice pays online
-    const init = await api()
+    // Alice pays at the studio — there is no online checkout
+    await api()
       .post(`${API}/payments/init`)
       .set(bearer(alice.accessToken))
       .send({ adoptionId })
+      .expect(404);
+    const paid = await api()
+      .post(`${API}/payments/cash`)
+      .set(bearer(admin))
+      .send({ adoptionId })
       .expect(201);
-    expect(init.body.data).toMatchObject({ amount: 2000, reference: a.applicationNo });
-    const tranId = init.body.data.transactionId;
-    gateway.validations.set(`V-${tranId}`, {
-      status: 'VALID',
-      tran_id: tranId,
-      val_id: `V-${tranId}`,
-      amount: '2000.00',
-      currency: 'BDT',
-      currency_type: 'BDT',
-      currency_amount: '2000.00',
-      bank_tran_id: 'B1',
-    });
-    const cb = await api()
-      .post(`${API}/payments/sslcommerz/success`)
-      .type('form')
-      .send({ tran_id: tranId, val_id: `V-${tranId}` })
-      .expect(303);
-    expect(cb.headers.location).toContain(`applicationNo=${a.applicationNo}`);
+    expect(paid.body.data).toMatchObject({ amount: '2000', method: 'cash' });
 
     const mine = await api()
       .get(`${API}/me/adoptions/${adoptionId}`)
@@ -199,8 +172,8 @@ describe('Review → payment → handover', () => {
     const adoptionId = (await review(app.id, 'approved').expect(200)).body.data.adoption.id;
 
     await api()
-      .post(`${API}/payments/init`)
-      .set(bearer(accessToken))
+      .post(`${API}/payments/cash`)
+      .set(bearer(admin))
       .send({ adoptionId })
       .expect(409);
     await api()

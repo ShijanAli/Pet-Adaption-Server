@@ -28,10 +28,6 @@ const target = {
 };
 
 export const PaymentValidation = {
-  init: z
-    .object({ ...target, currency: z.enum(['BDT', 'USD']).default('BDT') })
-    .refine(exactlyOneTarget, targetRule),
-
   cash: z
     .object({
       ...target,
@@ -56,21 +52,12 @@ export const PaymentValidation = {
 
   adminListQuery: listQuerySchema(PAYMENT_SORTABLE_FIELDS, {
     ...filters,
-    method: z.enum(['cash', 'card', 'mobile_banking', 'sslcommerz']).optional(),
+    method: z.enum(['cash', 'card', 'mobile_banking']).optional(),
     currency: z.enum(['BDT', 'USD']).optional(),
     userId: z.coerce.number().int().positive().optional(),
   }),
-
-  /** SSLCommerz posts many fields; we only rely on these and verify them server-side */
-  gatewayCallback: z.looseObject({
-    tran_id: z.string().min(1).max(100),
-    val_id: z.string().max(100).optional(),
-    status: z.string().max(50).optional(),
-  }),
 };
 
-export type InitPaymentInput = z.infer<typeof PaymentValidation.init>;
 export type CashPaymentInput = z.infer<typeof PaymentValidation.cash>;
 export type RefundInput = z.infer<typeof PaymentValidation.refund>;
 export type PaymentListQuery = z.infer<typeof PaymentValidation.adminListQuery>;
-export type GatewayCallback = z.infer<typeof PaymentValidation.gatewayCallback>;

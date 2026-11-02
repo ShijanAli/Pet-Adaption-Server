@@ -96,7 +96,7 @@ export const emailTemplates = {
     subject: `Booking received — ${d.bookingNo}`,
     html: layout(
       `Thanks, ${d.name}!`,
-      `<p>We received your booking. Complete the payment to confirm your slot.</p>
+      `<p>We received your booking. Our team will confirm it shortly — you pay at the studio.</p>
        ${detailsTable(bookingRows(d))}
        ${button(`${env.CLIENT_URL}/account/bookings/${d.bookingNo}`, 'View booking')}`,
     ),

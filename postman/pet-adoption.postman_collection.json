@@ -2784,7 +2784,7 @@
           "name": "Book a service",
           "request": {
             "method": "POST",
-            "description": "🔑 Login required\n\nPick a free slot from `GET /services/:id/availability`. The least busy free staff member is assigned unless `staffId` is given. Status starts as `pending` and becomes `confirmed` after payment (or when an admin confirms it).",
+            "description": "🔑 Login required\n\nPick a free slot from `GET /services/:id/availability`. The least busy free staff member is assigned unless `staffId` is given. Status starts as `pending` and becomes `confirmed` when staff confirm it. Payment is taken at the studio, not online.",
             "header": [
               {
                 "key": "Content-Type",
@@ -3250,192 +3250,6 @@
       "name": "Payments",
       "item": [
         {
-          "name": "Start an online payment (SSLCommerz)",
-          "request": {
-            "method": "POST",
-            "description": "🔑 Login required\n\nPays the remaining due amount of a booking (`bookingId`) or an adoption fee (`adoptionId`) in BDT or USD (converted with the `usd_exchange_rate` setting). Redirect the browser to the returned `gatewayUrl`. Afterwards SSLCommerz sends the user to `CLIENT_URL/payment/success|failed|cancelled?tranId=…&reference=…` (+ `bookingNo` or `applicationNo`).",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/init",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                "init"
-              ],
-              "variable": [],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"bookingId\": 1,\n  \"adoptionId\": 1,\n  \"currency\": \"BDT\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "SSLCommerz success callback",
-          "request": {
-            "method": "POST",
-            "description": "🌐 Public\n\nVerifies the payment, then redirects to the frontend. Called by SSLCommerz (form POST), not by the frontend.",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/sslcommerz/success",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                "sslcommerz",
-                "success"
-              ],
-              "variable": [],
-              "query": []
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tran_id\": \"sample tran_id\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "SSLCommerz fail callback",
-          "request": {
-            "method": "POST",
-            "description": "🌐 Public\n\nMarks the payment failed, then redirects. Called by SSLCommerz (form POST), not by the frontend.",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/sslcommerz/fail",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                "sslcommerz",
-                "fail"
-              ],
-              "variable": [],
-              "query": []
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tran_id\": \"sample tran_id\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "SSLCommerz cancel callback",
-          "request": {
-            "method": "POST",
-            "description": "🌐 Public\n\nMarks the payment cancelled, then redirects. Called by SSLCommerz (form POST), not by the frontend.",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/sslcommerz/cancel",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                "sslcommerz",
-                "cancel"
-              ],
-              "variable": [],
-              "query": []
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tran_id\": \"sample tran_id\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "SSLCommerz IPN callback",
-          "request": {
-            "method": "POST",
-            "description": "🌐 Public\n\nInstant payment notification (server-to-server). Called by SSLCommerz (form POST), not by the frontend.",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/sslcommerz/ipn",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                "sslcommerz",
-                "ipn"
-              ],
-              "variable": [],
-              "query": []
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tran_id\": \"sample tran_id\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
           "name": "Record a counter payment (cash / card / mobile banking)",
           "request": {
             "method": "POST",
@@ -3473,7 +3287,7 @@
           "name": "Refund a payment (full or partial)",
           "request": {
             "method": "POST",
-            "description": "🛡️ Permission: `payment.refund`\n\nSSLCommerz payments are refunded through the gateway; counter payments are recorded directly.",
+            "description": "🛡️ Permission: `payment.refund`\n\nRecords the refund directly — hand the money back at the counter or by mobile banking.",
             "header": [
               {
                 "key": "Content-Type",
@@ -6914,7 +6728,7 @@
           "name": "Update settings",
           "request": {
             "method": "PATCH",
-            "description": "🛡️ Permission: `setting.update`\n\nSend only the keys you change: `{ \"values\": { \"usd_exchange_rate\": 121.5, \"booking_cancel_before_hours\": 12 } }`. Every value is validated; nothing is saved if one is invalid.",
+            "description": "🛡️ Permission: `setting.update`\n\nSend only the keys you change: `{ \"values\": { \"booking_advance_days\": 14, \"booking_cancel_before_hours\": 12 } }`. Every value is validated; nothing is saved if one is invalid.",
             "header": [
               {
                 "key": "Content-Type",

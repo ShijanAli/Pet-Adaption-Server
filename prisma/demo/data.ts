@@ -1164,7 +1164,7 @@ export const FAQS: { q: string; a: string; category: string }[] = [
   },
   {
     q: 'Which payment methods do you accept?',
-    a: 'Pay online with bKash, Nagad, Rocket, cards or internet banking through SSLCommerz, or pay cash/card at the counter.',
+    a: 'Online payment is not available yet. You pay at the studio — cash, card or mobile banking — after your visit.',
     category: 'payment',
   },
   {

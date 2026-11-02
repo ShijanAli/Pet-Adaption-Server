@@ -26,7 +26,7 @@ r.patch(
   {
     summary: 'Update settings',
     description:
-      'Send only the keys you change: `{ "values": { "usd_exchange_rate": 121.5, "booking_cancel_before_hours": 12 } }`. ' +
+      'Send only the keys you change: `{ "values": { "booking_advance_days": 14, "booking_cancel_before_hours": 12 } }`. ' +
       'Every value is validated; nothing is saved if one is invalid.',
     access: { permissions: [P.SETTING.UPDATE] },
     body: SettingValidation.update,

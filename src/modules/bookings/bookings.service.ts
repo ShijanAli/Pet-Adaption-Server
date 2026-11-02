@@ -345,44 +345,6 @@ export const BookingService = {
     return getDetail({ id });
   },
 
-  /**
-   * Background job: cancels `pending` + `unpaid` bookings older than the
-   * `booking_payment_timeout_minutes` setting, so abandoned checkouts free their slot.
-   * Bookings with a gateway payment started in the last 15 minutes are left alone
-   * (the customer may still be on the payment page).
-   */
-  async expireUnpaid(now = new Date()) {
-    const minutes = await settingsService.getNumber('booking_payment_timeout_minutes');
-    if (!minutes) return { expired: 0 };
-
-    const stale = await prisma.booking.findMany({
-      where: {
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        createdAt: { lt: new Date(now.getTime() - minutes * 60_000) },
-        payments: {
-          none: { status: 'pending', createdAt: { gte: new Date(now.getTime() - 15 * 60_000) } },
-        },
-      },
-      include: adminBookingInclude,
-      orderBy: { createdAt: 'asc' },
-      take: 200,
-    });
-
-    let expired = 0;
-    const note = `Payment not received within ${minutes} minutes`;
-    for (const booking of stale) {
-      try {
-        await transition(booking.id, 'pending', 'cancelled', null, note);
-        notifyStatus(booking, 'cancelled', note);
-        expired++;
-      } catch {
-        // status changed concurrently (e.g. paid or confirmed by an admin) — skip
-      }
-    }
-    return { expired };
-  },
-
   async assignStaff(id: number, staffId: number) {
     const booking = await prisma.booking.findUnique({ where: { id } });
     if (!booking) throw AppError.notFound('Booking');

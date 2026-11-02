@@ -37,8 +37,6 @@ export const createApp = (): Express => {
     }),
   );
   app.use(express.json({ limit: '1mb' }));
-  // SSLCommerz posts callbacks as x-www-form-urlencoded
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
   app.use(hpp());
   app.use(compression());

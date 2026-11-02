@@ -14,7 +14,7 @@ export const BookingController = {
     const data = await BookingService.create(req.user!, req.body);
     sendResponse(res, {
       statusCode: StatusCodes.CREATED,
-      message: 'Booking created. Complete the payment to confirm it',
+      message: 'Booking received. We will confirm it shortly',
       data,
     });
   },

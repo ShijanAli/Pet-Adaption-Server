@@ -37,7 +37,3 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: SSLCOMMERZ_STORE_ID
-        sync: false
-      - key: SSLCOMMERZ_STORE_PASSWORD
-        sync: false

@@ -87,7 +87,7 @@ describe('Settings', () => {
       .set(bearer(admin))
       .send({
         values: {
-          usd_exchange_rate: -5,
+          booking_advance_days: -5,
           base_currency: 'USD',
           nope: 1,
           booking_slot_interval_minutes: 7,
@@ -97,9 +97,9 @@ describe('Settings', () => {
       .expect(422);
     expect(bad.body.errors.map((e: { path: string }) => e.path).sort()).toEqual([
       'values.base_currency',
+      'values.booking_advance_days',
       'values.booking_slot_interval_minutes',
       'values.nope',
-      'values.usd_exchange_rate',
     ]);
     expect(await settingsService.get('site_name')).toBe('Pet Adoption');
 
@@ -109,20 +109,20 @@ describe('Settings', () => {
         .set(bearer(admin))
         .send({
           values: {
-            usd_exchange_rate: 120.5,
+            booking_advance_days: 21,
             social_links: { facebook: 'https://facebook.com/pets' },
           },
         })
         .expect(200);
-      expect(ok.body.data.find((s: { key: string }) => s.key === 'usd_exchange_rate').value).toBe(
-        120.5,
+      expect(ok.body.data.find((s: { key: string }) => s.key === 'booking_advance_days').value).toBe(
+        21,
       );
-      expect(await settingsService.get('usd_exchange_rate')).toBe(120.5);
+      expect(await settingsService.get('booking_advance_days')).toBe(21);
     } finally {
       await api()
         .patch(`${API}/settings`)
         .set(bearer(admin))
-        .send({ values: { usd_exchange_rate: 122, social_links: {} } })
+        .send({ values: { booking_advance_days: 30, social_links: {} } })
         .expect(200);
     }
 

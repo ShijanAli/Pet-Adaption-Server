@@ -50,10 +50,6 @@ const envSchema = z.object({
   CLOUDINARY_FOLDER: z.string().default('pet-adoption'),
   UPLOAD_MAX_FILE_SIZE_MB: z.coerce.number().positive().default(5),
 
-  SSLCOMMERZ_STORE_ID: optionalString,
-  SSLCOMMERZ_STORE_PASSWORD: optionalString,
-  SSLCOMMERZ_IS_LIVE: z.stringbool().default(false),
-
   JOBS_ENABLED: z.stringbool().default(true),
   // Protects GET /cron/jobs (Vercel Cron sends it as a Bearer token). Unset => route disabled
   CRON_SECRET: optionalString,
