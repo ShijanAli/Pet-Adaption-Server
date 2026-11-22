@@ -21,6 +21,9 @@ services:
       # sync: false => Render asks for these values when you create the Blueprint
       - key: DATABASE_URL
         sync: false
+      # Direct (non-pooled) connection string used by `prisma migrate deploy`
+      - key: DIRECT_URL
+        sync: false
       - key: SERVER_URL
         sync: false
       - key: CLIENT_URL
