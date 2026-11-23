@@ -129,6 +129,12 @@ export const ReviewService = {
         images: { create: imageRows(images) },
       },
     });
+    notificationService.notifyAdmins({
+      type: 'review.new',
+      title: 'New review awaiting moderation',
+      message: `A ${review.rating}-star review was submitted`,
+      data: { reviewId: review.id },
+    });
     return mine.getById(review.id);
   },
 

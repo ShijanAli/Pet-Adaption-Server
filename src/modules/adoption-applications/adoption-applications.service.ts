@@ -115,6 +115,12 @@ export const ApplicationService = {
       message: `We received your application for ${pet.name}`,
       data: { applicationNo: created.applicationNo },
     });
+    notificationService.notifyAdmins({
+      type: 'adoption_application.new',
+      title: `New adoption application ${created.applicationNo}`,
+      message: `${user.firstName} applied to adopt ${pet.name}`,
+      data: { applicationNo: created.applicationNo },
+    });
     return created;
   },
 
