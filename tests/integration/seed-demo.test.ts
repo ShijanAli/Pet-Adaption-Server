@@ -39,12 +39,7 @@ describe('Demo data seeder', () => {
       SELECT COUNT(*)::bigint AS n FROM reviews r JOIN bookings b ON b.id = r.booking_id
        WHERE b.status <> 'completed' OR b.user_id <> r.user_id`,
     ).toBe(0);
-    expect(
-      await count`
-      SELECT COUNT(*)::bigint AS n FROM bookings b
-       WHERE b.payment_status = 'paid'
-         AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.booking_id = b.id AND p.status = 'success')`,
-    ).toBe(0);
+
 
     const list = await api().get(`${API}/services?limit=100`).expect(200);
     const rated = list.body.data.filter((s: { reviewsCount: number }) => s.reviewsCount > 0);

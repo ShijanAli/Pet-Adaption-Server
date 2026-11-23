@@ -18,7 +18,7 @@ import {
   myBookingRoutes,
   staffBookingRoutes,
 } from '@/modules/bookings/bookings.route';
-import { myPaymentRoutes, paymentRoutes } from '@/modules/payments/payments.route';
+
 import { adoptionPetRoutes } from '@/modules/adoption-pets/adoption-pets.route';
 import { favoriteRoutes } from '@/modules/favorites/favorites.route';
 import {
@@ -59,8 +59,6 @@ const moduleRoutes: ModuleRouter[] = [
   bookingRoutes,
   myBookingRoutes,
   staffBookingRoutes,
-  paymentRoutes,
-  myPaymentRoutes,
   // Phase 4
   adoptionPetRoutes,
   favoriteRoutes,

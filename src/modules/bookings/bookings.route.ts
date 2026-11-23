@@ -14,7 +14,7 @@ bookings.post(
     description:
       'Pick a free slot from `GET /services/:id/availability`. The least busy free staff member is assigned ' +
       'unless `staffId` is given. Status starts as `pending` and becomes `confirmed` ' +
-      'when staff confirm it. Payment is taken at the studio, not online.',
+      'when staff confirm it.',
     access: 'auth',
     body: BookingValidation.create,
   },
@@ -26,7 +26,7 @@ bookings.get(
   {
     summary: 'List all bookings',
     description:
-      'Search: booking no, customer email / name, pet name. Filters: status, paymentStatus, serviceId, staffId, userId, from, to.',
+      'Search: booking no, customer email / name, pet name. Filters: status, serviceId, staffId, userId, from, to.',
     access: { permissions: [P.BOOKING.VIEW] },
     query: BookingValidation.adminListQuery,
   },
@@ -36,7 +36,7 @@ bookings.get(
 bookings.get(
   '/:id',
   {
-    summary: 'Booking detail with history and payments',
+    summary: 'Booking detail with status history',
     access: { permissions: [P.BOOKING.VIEW] },
     params: idParam,
   },

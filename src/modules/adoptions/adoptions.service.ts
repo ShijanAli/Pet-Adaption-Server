@@ -3,7 +3,6 @@ import { AppError } from '@/shared/errors/AppError';
 import { createCrudService } from '@/shared/crud/crud.factory';
 import { emailService } from '@/shared/services/email.service';
 import { notificationService } from '@/shared/services/notification.service';
-import { round2, toNumber } from '@/shared/utils/money';
 import { dateOnly, nowInBusinessTz, toDateString } from '@/shared/utils/time';
 import type { AuthUser } from '@/shared/types/auth';
 import {
@@ -36,16 +35,13 @@ const all = createCrudService({
 type Dated = {
   adoptionDate: Date;
   followUpDate: Date | null;
-  feeAmount: unknown;
-  feePaid: unknown;
 };
 
-/** @db.Date → "YYYY-MM-DD" and the outstanding fee */
+/** @db.Date → "YYYY-MM-DD" */
 const toDto = <T extends Dated>(a: T) => ({
   ...a,
   adoptionDate: toDateString(a.adoptionDate),
   followUpDate: a.followUpDate ? toDateString(a.followUpDate) : null,
-  feeDue: Math.max(0, round2(toNumber(a.feeAmount as number) - toNumber(a.feePaid as number))),
 });
 
 const mapPage = (page: { data: unknown; meta: unknown }) => ({
@@ -94,13 +90,9 @@ export const AdoptionService = {
     return getDetail({ id });
   },
 
-  /** Handover done: requires the full fee, marks the pet as adopted */
+  /** Handover done: marks the pet as adopted (any fee is settled offline at handover) */
   async complete(id: number, input: CompleteAdoptionInput) {
     const adoption = await getInProgress(id);
-    const due = round2(toNumber(adoption.feeAmount) - toNumber(adoption.feePaid));
-    if (due > 0) {
-      throw AppError.badRequest(`The adoption fee is not fully paid yet (due ${due} BDT)`);
-    }
 
     const adoptionDate = input.adoptionDate ?? dateOnly(nowInBusinessTz().date);
     await prisma.$transaction(async (tx) => {
@@ -142,11 +134,6 @@ export const AdoptionService = {
   /** Backs out of an approved adoption: pet becomes available again */
   async cancel(actor: AuthUser, id: number, reason: string) {
     const adoption = await getInProgress(id);
-    if (toNumber(adoption.feePaid) > 0) {
-      throw AppError.conflict(
-        'Part of the fee was paid. Refund it first (POST /payments/:id/refund)',
-      );
-    }
 
     await prisma.$transaction(async (tx) => {
       const { count } = await tx.adoption.updateMany({

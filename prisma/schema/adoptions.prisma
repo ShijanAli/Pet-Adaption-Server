@@ -88,7 +88,7 @@ model Adoption {
   adoptionDate  DateTime  @map("adoption_date") @db.Date
   // fee snapshot taken when the application is approved (BDT)
   feeAmount     Decimal   @default(0) @map("fee_amount") @db.Decimal(10, 2)
-  feePaid       Decimal   @default(0) @map("fee_paid") @db.Decimal(10, 2)
+
   contractFile  String?   @map("contract_file") @db.VarChar(255)
   followUpDate  DateTime? @map("follow_up_date") @db.Date
   completedAt   DateTime? @map("completed_at")
@@ -100,7 +100,7 @@ model Adoption {
   application  AdoptionApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
   adoptionPet  AdoptionPet         @relation(fields: [adoptionPetId], references: [id], onDelete: Restrict)
   user         User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  payments     Payment[]
+
   testimonials Testimonial[]
 
   @@index([userId])

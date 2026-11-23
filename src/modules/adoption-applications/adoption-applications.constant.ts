@@ -33,7 +33,7 @@ const petSummary = {
 
 export const myApplicationInclude = {
   adoptionPet: petSummary,
-  adoption: { select: { id: true, status: true, feeAmount: true, feePaid: true } },
+  adoption: { select: { id: true, status: true, feeAmount: true } },
 } as const;
 
 export const adminApplicationInclude = {

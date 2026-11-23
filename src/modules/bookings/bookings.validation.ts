@@ -12,12 +12,12 @@ const bookingStatus = z.enum([
   'cancelled',
   'no_show',
 ]);
-const paymentStatus = z.enum(['unpaid', 'partial', 'paid', 'refunded']);
+
 const dateFilter = z.string().regex(DATE_REGEX, 'Use YYYY-MM-DD').transform(dateOnly);
 
 const commonFilters = {
   status: bookingStatus.optional(),
-  paymentStatus: paymentStatus.optional(),
+
   serviceId: z.coerce.number().int().positive().optional(),
   from: dateFilter.optional(),
   to: dateFilter.optional(),

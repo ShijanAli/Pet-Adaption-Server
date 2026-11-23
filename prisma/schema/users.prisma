@@ -31,11 +31,11 @@ model User {
   staffSchedules StaffSchedule[]
   blockedDates   BlockedDate[]
 
-  // bookings & payments
+  // bookings
   bookings          Booking[]          @relation("CustomerBookings")
   assignedBookings  Booking[]          @relation("StaffBookings")
   bookingStatusLogs BookingStatusLog[]
-  payments          Payment[]
+
 
   // promotions & reviews
   promotionsCreated Promotion[]      @relation("PromotionCreator")

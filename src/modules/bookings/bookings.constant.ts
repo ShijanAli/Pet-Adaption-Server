@@ -52,21 +52,6 @@ export const bookingDetailInclude = {
     orderBy: { createdAt: 'asc' as const },
     include: { changedBy: { select: { id: true, firstName: true, lastName: true } } },
   },
-  payments: {
-    orderBy: { createdAt: 'asc' as const },
-    select: {
-      id: true,
-      type: true,
-      method: true,
-      status: true,
-      amount: true,
-      currency: true,
-      baseAmount: true,
-      transactionId: true,
-      paidAt: true,
-      createdAt: true,
-    },
-  },
 } as const;
 
 const dateRange: QueryBuilderConfig['rangeFields'] = {
@@ -76,7 +61,7 @@ const dateRange: QueryBuilderConfig['rangeFields'] = {
 
 export const myBookingQueryConfig: QueryBuilderConfig = {
   searchableFields: ['bookingNo', 'service.name', 'pet.name'],
-  filterableFields: ['status', 'paymentStatus', 'petId', 'serviceId'],
+  filterableFields: ['status', 'petId', 'serviceId'],
   rangeFields: dateRange,
 };
 
@@ -84,7 +69,7 @@ export const adminBookingQueryConfig: QueryBuilderConfig = {
   searchableFields: ['bookingNo', 'user.email', 'user.firstName', 'user.lastName', 'pet.name'],
   filterableFields: {
     status: 'status',
-    paymentStatus: 'paymentStatus',
+
     serviceId: 'serviceId',
     staffId: 'assignedStaffId',
     userId: 'userId',

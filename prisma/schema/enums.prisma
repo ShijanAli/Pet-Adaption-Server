@@ -11,10 +11,6 @@ enum UserStatus {
   blocked
 }
 
-enum Currency {
-  BDT
-  USD
-}
 
 enum Gender {
   male
@@ -39,33 +35,6 @@ enum BookingStatus {
   completed
   cancelled
   no_show
-}
-
-enum PaymentStatus {
-  unpaid
-  partial
-  paid
-  refunded
-}
-
-enum PaymentMethod {
-  cash
-  card
-  mobile_banking
-  sslcommerz
-}
-
-enum PaymentType {
-  payment
-  refund
-}
-
-enum TransactionStatus {
-  pending
-  success
-  failed
-  cancelled
-  refunded
 }
 
 enum DiscountType {

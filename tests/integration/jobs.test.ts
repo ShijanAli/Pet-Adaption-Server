@@ -6,7 +6,7 @@ import { runExclusive, type Job } from '@/jobs/scheduler';
 import { API, api, bearer, createAndLogin } from '../helpers';
 
 describe('Job registry', () => {
-  it('never auto-cancels bookings for missing payment (online payment is off)', () => {
+  it('only runs token cleanup (no job ever auto-cancels bookings)', () => {
     expect(JOBS.map((j) => j.name)).toEqual(['cleanup-tokens']);
   });
 });

@@ -43,8 +43,7 @@ npm run dev
 
 `npm run db:seed:demo` fills an empty or development database with ~4 months of realistic history in a few seconds:
 1 manager, 6 staff (with schedules and skills), 42 customers with ~60 pets, 15 services in 6 categories, ~450 bookings
-(completed / cancelled / no-show / upcoming, with status logs), ~400 counter payments (revenue trending up
-month to month), ~160 reviews with replies, 4 promotions with usage, 23 adoptable pets with applications, adoptions,
+(completed / cancelled / no-show / upcoming, with status logs, trending up month to month), ~160 reviews with replies, 4 promotions with usage, 23 adoptable pets with applications, adoptions,
 fees and favourites, plus blog posts, FAQs, testimonials, gallery albums, contact messages, newsletter subscribers,
 notifications and holidays.
 
@@ -72,9 +71,8 @@ notifications and holidays.
 > With `EMAIL_DRY_RUN=true` no email is sent — the console log shows each email with its action link
 > (verify email, reset password …), so you can test every flow without an inbox.
 
-> **Upgrading from an earlier phase zip?** The schema changed in phase 3 (`payments.refund_of_id`, `note`) and phase 4
-> (`adoptions.status`, `fee_amount`, …). Run `npx prisma migrate dev` once. If nothing is deployed yet, the simplest is
-> to delete `prisma/migrations` and create a single fresh `init` migration.
+> **Upgrading an existing database?** Run `npx prisma migrate deploy`. The `remove_payments` migration drops the
+> old `payments` table, `bookings.payment_status` and `adoptions.fee_paid`.
 
 ---
 
@@ -133,7 +131,7 @@ Business settings (exchange rate, booking rules, contact info …) live in the `
 prisma/
   schema/                      multi-file schema — one file per domain
     schema.prisma              generator + datasource
-    enums · auth · users · pets · services · staff · bookings · payments · promotions
+    enums · auth · users · pets · services · staff · bookings · promotions
     reviews · gallery · adoptions · content · system  (.prisma)
   seed.ts
 src/
@@ -247,19 +245,19 @@ applies instantly.
 | --------- | ------------------------------------------------------------------------------------------------------------ |
 | Identity  | Auth, Users, Roles, Permissions, Uploads (Cloudinary)                                                        |
 | Catalog   | Pet types, Service categories (2 levels), Services, Staff schedules, Blocked dates, Availability             |
-| Customers | My pets, My bookings, My payments, My favorites, My applications, My adoptions, My reviews, My notifications |
-| Commerce  | Bookings, Promotions, Payments (counter only — online payment is off), Refunds                    |
+| Customers | My pets, My bookings, My favorites, My applications, My adoptions, My reviews, My notifications              |
+| Commerce  | Bookings, Promotions                                                                                         |
 | Adoption  | Adoption pets (+ images), Applications, Adoptions                                                            |
 | Content   | Reviews, Gallery, Blog, FAQs, Testimonials, Contact, Newsletter                                              |
 | System    | Settings, Activity logs, Dashboard                                                                           |
 
-### Booking & payment
+### Booking
 
 ```
 GET  /services/:id/availability?date=…        free slots (schedules, days off, existing bookings)
 POST /promotions/validate                      optional promo preview
 POST /bookings                                 pending, least busy free staff assigned
-PATCH /bookings/:id/status                     staff confirm it (no online payment — customers pay at the studio)
+PATCH /bookings/:id/status                     staff confirm it
 ```
 
 - Slot re-checked inside a **SERIALIZABLE** transaction with retry → two customers can never get the same staff
@@ -267,20 +265,15 @@ PATCH /bookings/:id/status                     staff confirm it (no online payme
 - Status workflow `pending → confirmed → in_progress → completed` (+ `cancelled`, `no_show`); staff can only update
   their own bookings.
 - Customers cancel up to `booking_cancel_before_hours` before the start; promo use is given back.
-- **Online payment is switched off.** Bookings are never auto-cancelled for non-payment; staff confirm them.
-- Counter payments (`/payments/cash`, partial allowed) and full / partial refunds are recorded by staff.
-- Bringing an online gateway back later: add a gateway client in `src/lib`, `init` + callback routes in the payments
-  module and (optionally) an unpaid-booking expiry job — the `Payment` model already stores `gateway`, `valId`,
-  `bankTranId`, `gatewayResponse` and the USD `exchangeRate`, so no schema change is needed.
-
+- There is no payment module: the app records bookings, the business takes payment however it likes.
+  No background job ever cancels a pending booking.
 ### Adoption
 
 ```
 POST  /adoption-applications                 one open application per pet per user
 PATCH /adoption-applications/:id/review      approve = pet locked + adoption record (fee snapshot) + others auto-rejected
-POST  /payments/cash { adoptionId }           staff record the fee paid at the counter
-PATCH /adoptions/:id/complete                needs the full fee → pet adopted
-PATCH /adoptions/:id/cancel                  only with nothing paid → pet available again
+PATCH /adoptions/:id/complete                handover (fee settled offline) → pet adopted
+PATCH /adoptions/:id/cancel                  pet available again
 ```
 
 ### Reviews & gallery
@@ -294,8 +287,8 @@ One review per **completed** booking, moderated; only approved reviews are publi
   `PATCH /settings` (all-or-nothing validation) and `settingsService.get()` all use it. `GET /settings/public` feeds the
   frontend.
 - **Activity log** is automatic for every admin write route (who, route, body with secrets redacted).
-- **Notifications** for bookings, payments, adoptions and reviews (`/me/notifications`).
-- **Dashboard**: `/stats`, `/revenue` (net, per day / month, business timezone, gaps filled), `/top-services`,
+- **Notifications** for bookings, adoptions and reviews (`/me/notifications`).
+- **Dashboard**: `/stats`, `/booking-value` (completed bookings count + value per day / month, gaps filled), `/top-services`,
   `/bookings-by-status`.
 
 ---

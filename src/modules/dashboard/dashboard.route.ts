@@ -8,20 +8,20 @@ const access = { permissions: [P.DASHBOARD.VIEW] };
 
 r.get(
   '/stats',
-  { summary: 'Cards: users, bookings, revenue, adoption, reviews, inbox', access },
+  { summary: 'Cards: users, bookings, booking value, adoption, reviews, inbox', access },
   DashboardController.getStats,
 );
 
 r.get(
-  '/revenue',
+  '/booking-value',
   {
-    summary: 'Net revenue chart',
+    summary: 'Completed bookings chart',
     description:
-      'Payments minus refunds per day or month (business timezone), split into bookings and adoption fees. Missing periods are filled with 0.',
+      'Count and value (sum of booking totals, BDT) of completed bookings per day or month, by booking date. Missing periods are filled with 0.',
     access,
-    query: DashboardValidation.revenue,
+    query: DashboardValidation.bookingValue,
   },
-  DashboardController.getRevenue,
+  DashboardController.getBookingValue,
 );
 
 r.get(

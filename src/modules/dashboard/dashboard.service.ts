@@ -1,5 +1,4 @@
 import { Prisma } from '@generated/prisma/client';
-import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
 import { SYSTEM_ROLES } from '@/shared/constants/roles';
 import { round2, toNumber } from '@/shared/utils/money';
@@ -12,29 +11,23 @@ import {
   startOfMonthString,
   toDateString,
 } from '@/shared/utils/time';
-import type { RangeQuery, RevenueQuery, TopServicesQuery } from './dashboard.validation';
+import type { BookingValueQuery, RangeQuery, TopServicesQuery } from './dashboard.validation';
 
 const OPEN_BOOKINGS = ['pending', 'confirmed', 'in_progress'] as const;
 
 /**
- * Net revenue in BDT between two instants:
- * successful (or later refunded) payments minus successful refunds.
+ * Value (sum of booking totals, BDT) and count of completed bookings whose
+ * booking date is in [from, to). Payment happens offline, so this is the
+ * "work delivered" figure, not cash received.
  */
-const netRevenue = async (from?: Date, to?: Date) => {
-  const paidAt = { ...(from && { gte: from }), ...(to && { lt: to }) };
-  const [paid, refunded] = await Promise.all([
-    prisma.payment.aggregate({
-      where: { type: 'payment', status: { in: ['success', 'refunded'] }, paidAt },
-      _sum: { baseAmount: true },
-    }),
-    prisma.payment.aggregate({
-      where: { type: 'refund', status: 'success', paidAt },
-      _sum: { baseAmount: true },
-    }),
-  ]);
-  return round2(toNumber(paid._sum.baseAmount) - toNumber(refunded._sum.baseAmount));
+const completedValue = async (from?: Date, to?: Date) => {
+  const bookingDate = { ...(from && { gte: from }), ...(to && { lt: to }) };
+  const agg = await prisma.booking.aggregate({
+    where: { status: 'completed', bookingDate },
+    _sum: { totalAmount: true },
+  });
+  return round2(toNumber(agg._sum.totalAmount));
 };
-
 /** Every period between from and to, so charts have no gaps */
 const periods = (from: string, to: string, groupBy: 'day' | 'month') => {
   const out: string[] = [];
@@ -56,7 +49,8 @@ export const DashboardService = {
     const today = nowInBusinessTz().date;
     const todayDate = dateOnly(today);
     const monthStart = startOfBusinessDay(startOfMonthString(today));
-    const lastMonthStart = startOfBusinessDay(previousMonthStart(today));
+    const monthStartDate = dateOnly(startOfMonthString(today));
+    const lastMonthStartDate = dateOnly(previousMonthStart(today));
 
     const [
       customers,
@@ -66,9 +60,9 @@ export const DashboardService = {
       upcomingBookings,
       pendingBookings,
       completedThisMonth,
-      revenueThisMonth,
-      revenueLastMonth,
-      revenueTotal,
+      valueThisMonth,
+      valueLastMonth,
+      valueTotal,
       availablePets,
       pendingApplications,
       adoptionsInProgress,
@@ -90,10 +84,10 @@ export const DashboardService = {
         where: { bookingDate: { gte: todayDate }, status: { in: [...OPEN_BOOKINGS] } },
       }),
       prisma.booking.count({ where: { status: 'pending' } }),
-      prisma.booking.count({ where: { status: 'completed', updatedAt: { gte: monthStart } } }),
-      netRevenue(monthStart),
-      netRevenue(lastMonthStart, monthStart),
-      netRevenue(),
+      prisma.booking.count({ where: { status: 'completed', bookingDate: { gte: monthStartDate } } }),
+      completedValue(monthStartDate),
+      completedValue(lastMonthStartDate, monthStartDate),
+      completedValue(),
       prisma.adoptionPet.count({ where: { status: 'available' } }),
       prisma.adoptionApplication.count({ where: { status: { in: ['pending', 'under_review'] } } }),
       prisma.adoption.count({ where: { status: 'in_progress' } }),
@@ -114,13 +108,13 @@ export const DashboardService = {
         pending: pendingBookings,
         completedThisMonth,
       },
-      revenue: {
-        thisMonth: revenueThisMonth,
-        lastMonth: revenueLastMonth,
-        total: revenueTotal,
+      bookingValue: {
+        thisMonth: valueThisMonth,
+        lastMonth: valueLastMonth,
+        total: valueTotal,
         growthPercent:
-          revenueLastMonth > 0
-            ? round2(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
+          valueLastMonth > 0
+            ? round2(((valueThisMonth - valueLastMonth) / valueLastMonth) * 100)
             : null,
       },
       adoption: {
@@ -137,39 +131,32 @@ export const DashboardService = {
     };
   },
 
-  /** Revenue chart: net BDT per day / month, split into bookings and adoption fees */
-  async getRevenue({ from, to, groupBy }: RevenueQuery) {
-    const start = startOfBusinessDay(from);
-    const end = startOfBusinessDay(toDateString(addDays(dateOnly(to), 1)));
+  /** Completed bookings per day / month: count and value (BDT) */
+  async getBookingValue({ from, to, groupBy }: BookingValueQuery) {
     // groupBy is validated by zod ('day' | 'month'), so Prisma.raw is safe here
     const unit = Prisma.raw(`'${groupBy}'`);
     const format = Prisma.raw(groupBy === 'day' ? `'YYYY-MM-DD'` : `'YYYY-MM'`);
 
     const rows = await prisma.$queryRaw<
-      { period: string; bookings: string | null; adoptions: string | null; payments: bigint }[]
+      { period: string; completed: bigint; value: string | null }[]
     >`
       SELECT
-        to_char(date_trunc(${unit}, paid_at AT TIME ZONE 'UTC' AT TIME ZONE ${env.BUSINESS_TIMEZONE}), ${format}) AS period,
-        SUM(CASE WHEN booking_id IS NOT NULL THEN (CASE WHEN type = 'refund' THEN -base_amount ELSE base_amount END) ELSE 0 END) AS bookings,
-        SUM(CASE WHEN adoption_id IS NOT NULL THEN (CASE WHEN type = 'refund' THEN -base_amount ELSE base_amount END) ELSE 0 END) AS adoptions,
-        COUNT(*) FILTER (WHERE type = 'payment') AS payments
-      FROM payments
-      WHERE paid_at >= ${start} AND paid_at < ${end}
-        AND ((type = 'payment' AND status IN ('success', 'refunded')) OR (type = 'refund' AND status = 'success'))
+        to_char(date_trunc(${unit}, booking_date), ${format}) AS period,
+        COUNT(*) AS completed,
+        SUM(total_amount) AS value
+      FROM bookings
+      WHERE status = 'completed'
+        AND booking_date >= ${from}::date AND booking_date <= ${to}::date
       GROUP BY 1
       ORDER BY 1`;
 
     const byPeriod = new Map(rows.map((r) => [r.period, r]));
     const series = periods(from, to, groupBy).map((period) => {
       const row = byPeriod.get(period);
-      const bookings = round2(toNumber(row?.bookings));
-      const adoptions = round2(toNumber(row?.adoptions));
       return {
         period,
-        bookings,
-        adoptions,
-        total: round2(bookings + adoptions),
-        payments: Number(row?.payments ?? 0),
+        completed: Number(row?.completed ?? 0),
+        value: round2(toNumber(row?.value)),
       };
     });
 
@@ -178,7 +165,8 @@ export const DashboardService = {
       to,
       groupBy,
       currency: 'BDT',
-      total: round2(series.reduce((sum, p) => sum + p.total, 0)),
+      completed: series.reduce((sum, p) => sum + p.completed, 0),
+      total: round2(series.reduce((sum, p) => sum + p.value, 0)),
       series,
     };
   },

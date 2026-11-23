@@ -31,13 +31,7 @@ export const BookingController = {
 
   async cancelMine(req: Request, res: Response) {
     const data = await BookingService.cancelMine(req.user!.id, idOrNo(req), req.body.reason);
-    const paid = data.paymentStatus === 'paid' || data.paymentStatus === 'partial';
-    sendResponse(res, {
-      message: paid
-        ? 'Booking cancelled. Your refund will be processed by our team'
-        : 'Booking cancelled successfully',
-      data,
-    });
+    sendResponse(res, { message: 'Booking cancelled successfully', data });
   },
 
   /* staff */

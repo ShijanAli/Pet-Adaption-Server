@@ -11,7 +11,7 @@ const fields = {
     .max(50)
     .nullable()
     .optional()
-    .describe('e.g. adoption, booking, payment'),
+    .describe('e.g. adoption, booking, grooming'),
   sortOrder: z.number().int().min(0).max(100_000).optional(),
   status: activeStatusSchema,
 };

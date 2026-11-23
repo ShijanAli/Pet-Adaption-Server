@@ -17,7 +17,7 @@ model Booking {
   discountAmount  Decimal       @default(0) @map("discount_amount") @db.Decimal(10, 2)
   totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
   status          BookingStatus @default(pending)
-  paymentStatus   PaymentStatus @default(unpaid) @map("payment_status")
+
   customerNote    String?       @map("customer_note")
   cancelledAt     DateTime?     @map("cancelled_at")
   cancelReason    String?       @map("cancel_reason")
@@ -32,7 +32,7 @@ model Booking {
   address       UserAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
 
   statusLogs      BookingStatusLog[]
-  payments        Payment[]
+
   promotionUsages PromotionUsage[]
   review          Review?
 

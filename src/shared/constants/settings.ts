@@ -3,7 +3,7 @@ import { z } from 'zod';
 type Definition<T extends z.ZodType> = {
   schema: T;
   default: z.infer<T>;
-  group: 'general' | 'payment' | 'booking' | 'notification';
+  group: 'general' | 'booking' | 'notification';
   /** exposed through GET /settings/public */
   isPublic: boolean;
   /** cannot be changed through the API */
@@ -87,7 +87,7 @@ export const SETTING_DEFINITIONS = {
   base_currency: define({
     schema: z.literal('BDT'),
     default: 'BDT',
-    group: 'payment',
+    group: 'general',
     isPublic: true,
     readonly: true,
     description: 'Prices are stored in this currency',

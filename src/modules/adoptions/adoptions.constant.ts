@@ -30,20 +30,6 @@ export const adminAdoptionInclude = {
 export const adoptionDetailInclude = {
   ...adminAdoptionInclude,
   application: true,
-  payments: {
-    orderBy: { createdAt: 'asc' as const },
-    select: {
-      id: true,
-      type: true,
-      method: true,
-      status: true,
-      amount: true,
-      currency: true,
-      baseAmount: true,
-      transactionId: true,
-      paidAt: true,
-    },
-  },
 } as const;
 
 const range: QueryBuilderConfig['rangeFields'] = {

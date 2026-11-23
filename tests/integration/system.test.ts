@@ -244,29 +244,30 @@ describe('Dashboard', () => {
       currency: 'BDT',
       users: { customers: expect.any(Number) },
       bookings: { upcoming: expect.any(Number) },
-      revenue: { thisMonth: expect.any(Number), total: expect.any(Number) },
+      bookingValue: { thisMonth: expect.any(Number), total: expect.any(Number) },
       adoption: { availablePets: expect.any(Number) },
     });
     const { accessToken } = await createAndLogin();
     await api().get(`${API}/dashboard/stats`).set(bearer(accessToken)).expect(403);
   });
 
-  it('adds today’s payments to the revenue chart and fills empty days', async () => {
+  it('counts completed bookings in the booking-value chart and fills empty days', async () => {
     const today = nowInBusinessTz().date;
     const from = `${today.slice(0, 7)}-01`;
-    const revenue = async () =>
+    const chart = async (f: string, t: string) =>
       (
         await api()
-          .get(`${API}/dashboard/revenue`)
-          .query({ from, to: today })
+          .get(`${API}/dashboard/booking-value`)
+          .query({ from: f, to: t })
           .set(bearer(admin))
           .expect(200)
       ).body.data;
 
-    const before = await revenue();
-    expect(before.series).toHaveLength(Number(today.slice(8)));
+    const month = await chart(from, today);
+    expect(month.series).toHaveLength(Number(today.slice(8)));
 
     const { service, customer, pet, date } = await bookableSetup({ price: 750 });
+    const before = await chart(date, date);
     const booking = (
       await api()
         .post(`${API}/bookings`)
@@ -274,17 +275,16 @@ describe('Dashboard', () => {
         .send({ serviceId: service.id, petId: pet.id, date, startTime: '09:00' })
         .expect(201)
     ).body.data;
-    await api()
-      .post(`${API}/payments/cash`)
-      .set(bearer(admin))
-      .send({ bookingId: booking.id })
-      .expect(201);
 
-    const after = await revenue();
-    const todayPoint = (d: { series: { period: string; bookings: number }[] }) =>
-      d.series.find((p) => p.period === today)!;
-    expect(todayPoint(after).bookings - todayPoint(before).bookings).toBe(750);
+    // open bookings don't count
+    expect((await chart(date, date)).total).toBe(before.total);
+
+    await prisma.booking.update({ where: { id: booking.id }, data: { status: 'completed' } });
+    const after = await chart(date, date);
+    expect(after.completed - before.completed).toBe(1);
     expect(after.total - before.total).toBe(750);
+    expect(after.series[0]).toMatchObject({ period: date, completed: before.completed + 1 });
+    await prisma.booking.update({ where: { id: booking.id }, data: { status: 'confirmed' } });
 
     const top = await api()
       .get(`${API}/dashboard/top-services`)
@@ -303,7 +303,7 @@ describe('Dashboard', () => {
     expect(byStatus.body.data.confirmed).toBeGreaterThanOrEqual(1);
 
     await api()
-      .get(`${API}/dashboard/revenue`)
+      .get(`${API}/dashboard/booking-value`)
       .query({ from: today, to: from > today ? from : '2020-01-01' })
       .set(bearer(admin))
       .expect(422);

@@ -10,7 +10,7 @@ export const button = (href: string, label: string) => `
   <a href="${href}" style="display:inline-block;background:#c2410c;color:#ffffff;text-decoration:none;
      padding:12px 24px;border-radius:8px;font-weight:600;margin:16px 0">${escapeHtml(label)}</a>`;
 
-/** Two-column key/value table (booking & payment details) */
+/** Two-column key/value table (booking details) */
 export const detailsTable = (rows: [label: string, value: string][]) => `
   <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;margin:16px 0;font-size:14px">
     ${rows

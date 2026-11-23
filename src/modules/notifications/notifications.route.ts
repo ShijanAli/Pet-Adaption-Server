@@ -6,7 +6,7 @@ import { NotificationValidation } from './notifications.validation';
 const r = createModuleRouter(
   '/me/notifications',
   'My Notifications',
-  'In-app notifications (booking, payment, adoption, review updates)',
+  'In-app notifications (booking, adoption, review updates)',
 );
 
 r.get(

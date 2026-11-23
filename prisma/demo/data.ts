@@ -1163,14 +1163,14 @@ export const FAQS: { q: string; a: string; category: string }[] = [
     category: 'booking',
   },
   {
-    q: 'Which payment methods do you accept?',
-    a: 'Online payment is not available yet. You pay at the studio — cash, card or mobile banking — after your visit.',
-    category: 'payment',
+    q: 'Do I pay when I book?',
+    a: 'No. Booking online is free — you pay at the studio after your visit.',
+    category: 'booking',
   },
   {
-    q: 'Do you offer refunds?',
-    a: 'If you cancel in time, online payments are refunded to the original method within 7–10 working days.',
-    category: 'payment',
+    q: 'What if I need to cancel?',
+    a: 'You can cancel from My bookings up to a few hours before your slot, at no cost.',
+    category: 'booking',
   },
   {
     q: 'Do you groom cats?',
@@ -1350,8 +1350,8 @@ export const CONTACT_SUBJECTS: [string, string][] = [
     'Thank you for the great job with Coco yesterday — she looks beautiful!',
   ],
   [
-    'Payment issue',
-    'I paid with bKash but the booking still shows unpaid. Transaction ID attached in my email.',
+    'Change of booking time',
+    'Can I move my Saturday grooming slot to Sunday morning? Same pet, same service.',
   ],
   [
     'Volunteer opportunities',

@@ -73,8 +73,8 @@ describe('Applying', () => {
   });
 });
 
-describe('Review → payment → handover', () => {
-  it('runs the full adoption with the fee paid at the counter', async () => {
+describe('Review → handover', () => {
+  it('runs the full adoption (fee is settled offline at handover)', async () => {
     const pet = await createAdoptionPet({ adoptionFee: 2000 });
     const alice = await createAndLogin();
     const bob = await createAndLogin();
@@ -112,32 +112,14 @@ describe('Review → payment → handover', () => {
     expect(bobMail?.subject).toMatch(/rejected/);
 
     const adoptionId = approved.body.data.adoption.id;
-    // handover blocked until the fee is paid
-    const early = await api()
-      .patch(`${API}/adoptions/${adoptionId}/complete`)
-      .set(bearer(admin))
-      .send({});
-    expect(early.status).toBe(400);
-    expect(early.body.message).toMatch(/due 2000/);
-
-    // Alice pays at the studio — there is no online checkout
-    await api()
-      .post(`${API}/payments/init`)
-      .set(bearer(alice.accessToken))
-      .send({ adoptionId })
-      .expect(404);
-    const paid = await api()
-      .post(`${API}/payments/cash`)
-      .set(bearer(admin))
-      .send({ adoptionId })
-      .expect(201);
-    expect(paid.body.data).toMatchObject({ amount: '2000', method: 'cash' });
-
     const mine = await api()
       .get(`${API}/me/adoptions/${adoptionId}`)
       .set(bearer(alice.accessToken))
       .expect(200);
-    expect(mine.body.data).toMatchObject({ feePaid: '2000', feeDue: 0 });
+    expect(mine.body.data).toMatchObject({ feeAmount: '2000' });
+    expect(mine.body.data).not.toHaveProperty('feePaid');
+    // the payments API no longer exists
+    await api().post(`${API}/payments/cash`).set(bearer(admin)).send({ adoptionId }).expect(404);
     // someone else's adoption is invisible
     await api().get(`${API}/me/adoptions/${adoptionId}`).set(bearer(bob.accessToken)).expect(404);
 
@@ -172,49 +154,24 @@ describe('Review → payment → handover', () => {
     const adoptionId = (await review(app.id, 'approved').expect(200)).body.data.adoption.id;
 
     await api()
-      .post(`${API}/payments/cash`)
-      .set(bearer(admin))
-      .send({ adoptionId })
-      .expect(409);
-    await api()
       .patch(`${API}/adoptions/${adoptionId}/complete`)
       .set(bearer(admin))
       .send({})
       .expect(200);
   });
 
-  it('cancelling an adoption requires refunding first, then frees the pet', async () => {
+  it('cancelling an adoption frees the pet', async () => {
     const pet = await createAdoptionPet({ adoptionFee: 500 });
     const { accessToken } = await createAndLogin();
     const app = (await apply(accessToken, pet.id).expect(201)).body.data;
     const adoptionId = (await review(app.id, 'approved').expect(200)).body.data.adoption.id;
 
-    const cash = await api()
-      .post(`${API}/payments/cash`)
-      .set(bearer(admin))
-      .send({ adoptionId, amount: 200 })
-      .expect(201);
-    expect(
-      (await prisma.adoption.findUniqueOrThrow({ where: { id: adoptionId } })).feePaid.toString(),
-    ).toBe('200');
-
-    await api()
-      .patch(`${API}/adoptions/${adoptionId}/cancel`)
-      .set(bearer(admin))
-      .send({ reason: 'Family moved abroad' })
-      .expect(409);
-
-    await api()
-      .post(`${API}/payments/${cash.body.data.id}/refund`)
-      .set(bearer(admin))
-      .send({ reason: 'Adoption cancelled' })
-      .expect(201);
     const cancelled = await api()
       .patch(`${API}/adoptions/${adoptionId}/cancel`)
       .set(bearer(admin))
       .send({ reason: 'Family moved abroad' })
       .expect(200);
-    expect(cancelled.body.data).toMatchObject({ status: 'cancelled', feePaid: '0' });
+    expect(cancelled.body.data).toMatchObject({ status: 'cancelled' });
 
     expect((await prisma.adoptionPet.findUniqueOrThrow({ where: { id: pet.id } })).status).toBe(
       'available',

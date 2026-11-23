@@ -6,15 +6,15 @@
  *   npm run db:seed:demo -- --reset → remove previous demo data, then add it again
  *   npm run db:seed:demo -- --remove→ only remove demo data
  *
- * Writes through Prisma (not the API) so it can create history: past bookings, payments,
- * refunds, reviews and adoptions over the last ~4 months, which the dashboard charts need.
+ * Writes through Prisma (not the API) so it can create history: past bookings, reviews
+ * and adoptions over the last ~4 months, which the dashboard charts need.
  * Everything it creates is recorded in the `__demo_seed` settings row, so --reset/--remove
  * delete exactly that — never your own data. Demo emails use @demo.petplex.dev (no real inbox).
  * Refuses to run with NODE_ENV=production unless --force is passed.
  */
 import bcrypt from 'bcryptjs';
 import { pathToFileURL } from 'node:url';
-import type { BookingStatus, PaymentMethod, PaymentStatus, Prisma } from '@generated/prisma/client';
+import type { BookingStatus, Prisma } from '@generated/prisma/client';
 import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
 import { SYSTEM_ROLES } from '@/shared/constants/roles';
@@ -136,9 +136,7 @@ async function removeDemo() {
 
   await prisma.$transaction(
     async (tx) => {
-      // history first (FKs are RESTRICT): refunds → payments → usages → reviews → bookings
-      await tx.payment.deleteMany({ where: { userId: inUsers, type: 'refund' } });
-      await tx.payment.deleteMany({ where: { userId: inUsers } });
+      // history first (FKs are RESTRICT): usages → reviews → bookings
       await tx.promotionUsage.deleteMany({ where: { userId: inUsers } });
       await tx.review.deleteMany({ where: { userId: inUsers } });
       await tx.booking.deleteMany({ where: { userId: inUsers } });
@@ -518,7 +516,7 @@ async function createDemo() {
         svc.unitPrice >= ((def as { minOrderAmount?: number }).minOrderAmount ?? 0),
     );
 
-  /* bookings, payments, reviews --------------------------------------------- */
+  /* bookings, reviews ------------------------------------------------------- */
   type Plan = Prisma.BookingCreateManyInput & {
     _logs: {
       from: BookingStatus | null;
@@ -527,7 +525,7 @@ async function createDemo() {
       by: number | null;
       note?: string;
     }[];
-    _pay?: { method: PaymentMethod; at: Date };
+
     _promo?: { id: number; amount: number };
     _svc: Svc;
   };
@@ -540,7 +538,7 @@ async function createDemo() {
   for (let offset = -120; offset <= 14; offset++) {
     const date = dayStr(offset);
     const dow = weekday(date);
-    // busier on weekends (Fri/Sat in BD), growing towards today so the revenue chart trends up
+    // busier on weekends (Fri/Sat in BD), growing towards today so the booking chart trends up
     const base = dow === 5 ? 1 : dow === 6 ? 5 : 3;
     const growth = offset < -60 ? 0 : offset < -20 ? 1 : 2;
     const count = offset > 0 ? int(1, 3) : int(base - 1, base + 1) + growth;
@@ -580,7 +578,7 @@ async function createDemo() {
       const startTime = toTime(slot.s);
       const endTime = toTime(Math.min(slot.s + svc.minutes, 23 * 60 + 59));
       // Staff confirm new bookings, so only a few just-made ones are still pending;
-      // everything else upcoming is confirmed. Payment is taken at the counter after the visit.
+      // everything else upcoming is confirmed.
       const fresh = offset > 1 && freshPending < 3 && chance(0.3);
       if (fresh) freshPending++;
       const createdAt = fresh
@@ -610,20 +608,10 @@ async function createDemo() {
       else if (startAt < NOW) status = 'in_progress';
       else status = fresh ? 'pending' : 'confirmed';
 
-      const method: PaymentMethod = weighted(
-        ['cash', 'mobile_banking', 'card'] as const,
-        (x) => ({ cash: 5, mobile_banking: 4, card: 2 })[x],
-      );
-      let paymentStatus: PaymentStatus = 'unpaid';
-      let pay: Plan['_pay'];
       const cancelledAt =
         status === 'cancelled'
           ? clampPast(new Date(Math.min(startAt.getTime() - int(2, 48) * 3_600_000, NOW.getTime())))
           : null;
-      if (status === 'completed') {
-        paymentStatus = 'paid';
-        pay = { method, at: endAt };
-      }
 
       const by = slot.staffId;
       const logs: Plan['_logs'] = [{ from: null, to: 'pending', at: createdAt, by: customer.id }];
@@ -665,7 +653,6 @@ async function createDemo() {
         discountAmount: discount,
         totalAmount: svc.unitPrice - discount,
         status,
-        paymentStatus,
         customerNote: chance(0.15)
           ? pick([
               'Please be gentle with her ears.',
@@ -682,7 +669,7 @@ async function createDemo() {
         createdAt,
         updatedAt: logs[logs.length - 1].at,
         _logs: logs,
-        _pay: pay,
+
         _promo: promo && discount ? { id: promo.id, amount: discount } : undefined,
         _svc: svc,
       });
@@ -690,7 +677,7 @@ async function createDemo() {
   }
 
   const bookings = await prisma.booking.createManyAndReturn({
-    data: plans.map(({ _logs, _pay, _promo, _svc, ...b }) => b),
+    data: plans.map(({ _logs, _promo, _svc, ...b }) => b),
     select: { id: true, bookingNo: true },
   });
   const bookingId = new Map(bookings.map((b) => [b.bookingNo, b.id]));
@@ -725,25 +712,6 @@ async function createDemo() {
       data: { usedCount: withId.filter((b) => b._promo?.id === p.id).length },
     });
   }
-
-  const paymentRow = (b: (typeof withId)[number]) => ({
-    userId: b.userId,
-    bookingId: b.id,
-    amount: b.totalAmount,
-    baseAmount: b.totalAmount,
-    currency: 'BDT' as const,
-    exchangeRate: 1,
-    method: b._pay!.method,
-    transactionId: ref('CASH', b._pay!.at),
-    type: 'payment' as const,
-    status: 'success' as const,
-    note: 'Paid at the counter',
-    paidAt: b._pay!.at,
-    createdAt: b._pay!.at,
-    updatedAt: b._pay!.at,
-  });
-  const payable = withId.filter((b) => b._pay);
-  await prisma.payment.createMany({ data: payable.map(paymentRow) });
 
   // reviews: ~45% of completed visits; recent ones may still wait for moderation
   const reviewRows: Prisma.ReviewCreateManyInput[] = [];
@@ -871,7 +839,7 @@ async function createDemo() {
     });
   };
 
-  const adoptionPayments: Prisma.PaymentCreateManyInput[] = [];
+  let adopted = 0;
   let toby: number | null = null;
   for (const p of adoptionPets) {
     const listed = p.createdAt;
@@ -886,7 +854,7 @@ async function createDemo() {
     } else if (p.def.status === 'on_hold') {
       if (chance(0.5)) await application(p.id, 'cancelled', after(int(3, 10)));
     } else {
-      // pending → approved + adoption in progress; adopted → approved + completed (+ fee paid)
+      // pending → approved + adoption in progress; adopted → approved + completed
       const app = await application(p.id, 'approved', after(int(3, 12)));
       if (chance(0.5)) await application(p.id, 'rejected', after(int(4, 14)));
       const done = p.def.status === 'adopted';
@@ -899,7 +867,7 @@ async function createDemo() {
           status: done ? 'completed' : 'in_progress',
           adoptionDate: dateOnly(adoptionDate.toISOString().slice(0, 10)),
           feeAmount: p.def.fee,
-          feePaid: done ? p.def.fee : 0,
+
           followUpDate: done
             ? dateOnly(
                 new Date(adoptionDate.getTime() + 30 * 86_400_000).toISOString().slice(0, 10),
@@ -910,26 +878,9 @@ async function createDemo() {
         },
       });
       if (p.def.name === 'Toby') toby = adoption.id;
-      if (done && p.def.fee > 0) {
-        adoptionPayments.push({
-          userId: app.userId,
-          adoptionId: adoption.id,
-          amount: p.def.fee,
-          baseAmount: p.def.fee,
-          currency: 'BDT',
-          exchangeRate: 1,
-          method: 'cash',
-          transactionId: ref('CASH', adoptionDate),
-          type: 'payment',
-          status: 'success',
-          note: 'Adoption fee',
-          paidAt: adoptionDate,
-          createdAt: adoptionDate,
-        });
-      }
+      if (done) adopted++;
     }
   }
-  await prisma.payment.createMany({ data: adoptionPayments });
 
   // favourites
   const favs = new Set<string>();
@@ -1129,18 +1080,18 @@ async function createDemo() {
   });
 
   const count = (s: BookingStatus) => withId.filter((b) => b.status === s).length;
-  const revenue =
-    payable.reduce((s, b) => s + Number(b.totalAmount), 0) +
-    adoptionPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const completedValue = withId
+    .filter((b) => b.status === 'completed')
+    .reduce((s, b) => s + Number(b.totalAmount), 0);
   console.log(`
 ✅ Demo data ready
    Accounts     : 1 manager, ${staff.length} staff, ${customers.length} customers (password: ${D.DEMO_PASSWORD})
    Catalog      : ${m.categories.length} categories, ${m.services.length} services, ${m.promotions.length} promotions
    Customer pets: ${pets.length}
    Bookings     : ${withId.length} (${count('completed')} completed, ${count('cancelled')} cancelled, ${count('no_show')} no-show, ${count('confirmed') + count('pending') + count('in_progress')} upcoming/today)
-   Payments     : ${payable.length + adoptionPayments.length} · total ৳${revenue.toLocaleString('en-IN')}
+   Booked value : ৳${completedValue.toLocaleString('en-IN')} from completed bookings
    Reviews      : ${reviews.length}
-   Adoption     : ${adoptionPets.length} pets, ${adoptionPayments.length} paid adoptions, ${favs.size} favourites
+   Adoption     : ${adoptionPets.length} pets, ${adopted} completed adoptions, ${favs.size} favourites
    Content      : ${m.blogPosts.length} posts, ${m.faqs.length} FAQs, ${m.testimonials.length} testimonials, ${m.galleryItems.length} gallery items
    Inbox        : ${m.contacts.length} messages, ${m.subscribers.length} subscribers, ${notes.length} notifications
    Images from  : ${IMAGE_BASE}  (set DEMO_IMAGE_BASE_URL to change)

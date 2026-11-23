@@ -114,43 +114,6 @@ export const emailTemplates = {
     ),
   }),
 
-  PAYMENT_RECEIPT: (d: {
-    name: string;
-    reference: string;
-    transactionId: string;
-    amount: string;
-    method: string;
-    paidAt: string;
-  }): Rendered => ({
-    subject: `Payment received — ${d.reference}`,
-    html: layout(
-      `Payment received`,
-      `<p>Hi ${escapeHtml(d.name)}, we received your payment. Thank you!</p>
-       ${detailsTable([
-         ['For', d.reference],
-         ['Amount', d.amount],
-         ['Method', d.method],
-         ['Transaction ID', d.transactionId],
-         ['Paid at', d.paidAt],
-       ])}`,
-    ),
-  }),
-
-  REFUND_PROCESSED: (d: {
-    name: string;
-    reference: string;
-    amount: string;
-    status: string;
-  }): Rendered => ({
-    subject: `Refund ${d.status} — ${d.reference}`,
-    html: layout(
-      'Refund update',
-      `<p>Hi ${escapeHtml(d.name)}, a refund of <b>${escapeHtml(d.amount)}</b> for
-       <b>${escapeHtml(d.reference)}</b> is <b>${escapeHtml(d.status)}</b>.
-       Depending on your bank it can take 7–10 working days to appear.</p>`,
-    ),
-  }),
-
   ADOPTION_APPLICATION_RECEIVED: (d: {
     name: string;
     applicationNo: string;

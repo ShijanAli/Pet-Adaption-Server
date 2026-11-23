@@ -62,11 +62,7 @@ export const PERMISSIONS = {
     UPDATE: 'promotion.update',
     DELETE: 'promotion.delete',
   },
-  PAYMENT: {
-    VIEW: 'payment.view',
-    CREATE: 'payment.create',
-    REFUND: 'payment.refund',
-  },
+
   REVIEW: {
     VIEW: 'review.view',
     MODERATE: 'review.moderate',

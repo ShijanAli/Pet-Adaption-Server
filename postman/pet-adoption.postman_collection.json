@@ -2784,7 +2784,7 @@
           "name": "Book a service",
           "request": {
             "method": "POST",
-            "description": "🔑 Login required\n\nPick a free slot from `GET /services/:id/availability`. The least busy free staff member is assigned unless `staffId` is given. Status starts as `pending` and becomes `confirmed` when staff confirm it. Payment is taken at the studio, not online.",
+            "description": "🔑 Login required\n\nPick a free slot from `GET /services/:id/availability`. The least busy free staff member is assigned unless `staffId` is given. Status starts as `pending` and becomes `confirmed` when staff confirm it.",
             "header": [
               {
                 "key": "Content-Type",
@@ -2817,7 +2817,7 @@
           "name": "List all bookings",
           "request": {
             "method": "GET",
-            "description": "🛡️ Permission: `booking.view`\n\nSearch: booking no, customer email / name, pet name. Filters: status, paymentStatus, serviceId, staffId, userId, from, to.",
+            "description": "🛡️ Permission: `booking.view`\n\nSearch: booking no, customer email / name, pet name. Filters: status, serviceId, staffId, userId, from, to.",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/bookings",
@@ -2860,11 +2860,6 @@
                   "disabled": true
                 },
                 {
-                  "key": "paymentStatus",
-                  "value": "unpaid",
-                  "disabled": true
-                },
-                {
                   "key": "serviceId",
                   "value": "1",
                   "disabled": true
@@ -2894,7 +2889,7 @@
           }
         },
         {
-          "name": "Booking detail with history and payments",
+          "name": "Booking detail with status history",
           "request": {
             "method": "GET",
             "description": "🛡️ Permission: `booking.view`",
@@ -3077,11 +3072,6 @@
                   "disabled": true
                 },
                 {
-                  "key": "paymentStatus",
-                  "value": "unpaid",
-                  "disabled": true
-                },
-                {
                   "key": "serviceId",
                   "value": "1",
                   "disabled": true
@@ -3221,11 +3211,6 @@
                   "disabled": true
                 },
                 {
-                  "key": "paymentStatus",
-                  "value": "unpaid",
-                  "disabled": true
-                },
-                {
                   "key": "serviceId",
                   "value": "1",
                   "disabled": true
@@ -3241,307 +3226,6 @@
                   "disabled": true
                 }
               ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Payments",
-      "item": [
-        {
-          "name": "Record a counter payment (cash / card / mobile banking)",
-          "request": {
-            "method": "POST",
-            "description": "🛡️ Permission: `payment.create`\n\nFor a booking (`bookingId`) or an adoption fee (`adoptionId`). Partial payments are allowed.",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/cash",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                "cash"
-              ],
-              "variable": [],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"bookingId\": 1,\n  \"adoptionId\": 1,\n  \"amount\": 1,\n  \"method\": \"cash\",\n  \"note\": \"sample note\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Refund a payment (full or partial)",
-          "request": {
-            "method": "POST",
-            "description": "🛡️ Permission: `payment.refund`\n\nRecords the refund directly — hand the money back at the counter or by mobile banking.",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/payments/:id/refund",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                ":id",
-                "refund"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "1"
-                }
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"sample reason\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "List all payments & refunds",
-          "request": {
-            "method": "GET",
-            "description": "🛡️ Permission: `payment.view`",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/payments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments"
-              ],
-              "variable": [],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "disabled": true
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "sample searchTerm",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "pending",
-                  "disabled": true
-                },
-                {
-                  "key": "type",
-                  "value": "payment",
-                  "disabled": true
-                },
-                {
-                  "key": "bookingId",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "adoptionId",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "from",
-                  "value": "sample from",
-                  "disabled": true
-                },
-                {
-                  "key": "to",
-                  "value": "sample to",
-                  "disabled": true
-                },
-                {
-                  "key": "method",
-                  "value": "cash",
-                  "disabled": true
-                },
-                {
-                  "key": "currency",
-                  "value": "BDT",
-                  "disabled": true
-                },
-                {
-                  "key": "userId",
-                  "value": "1",
-                  "disabled": true
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Payment detail",
-          "request": {
-            "method": "GET",
-            "description": "🛡️ Permission: `payment.view`",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/payments/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "payments",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "1"
-                }
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "My Payments",
-      "item": [
-        {
-          "name": "List my payments",
-          "request": {
-            "method": "GET",
-            "description": "🔑 Login required",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/me/payments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "me",
-                "payments"
-              ],
-              "variable": [],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "disabled": true
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "sample searchTerm",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "pending",
-                  "disabled": true
-                },
-                {
-                  "key": "type",
-                  "value": "payment",
-                  "disabled": true
-                },
-                {
-                  "key": "bookingId",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "adoptionId",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "from",
-                  "value": "sample from",
-                  "disabled": true
-                },
-                {
-                  "key": "to",
-                  "value": "sample to",
-                  "disabled": true
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get my payment",
-          "request": {
-            "method": "GET",
-            "description": "🔑 Login required",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/me/payments/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "me",
-                "payments",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "1"
-                }
-              ],
-              "query": []
             }
           }
         }
@@ -4406,7 +4090,7 @@
           }
         },
         {
-          "name": "Adoption detail with payments",
+          "name": "Adoption detail",
           "request": {
             "method": "GET",
             "description": "🛡️ Permission: `adoption.view`",
@@ -4473,7 +4157,7 @@
           "name": "Complete the adoption (handover)",
           "request": {
             "method": "PATCH",
-            "description": "🛡️ Permission: `adoption.update`\n\nRequires the adoption fee to be fully paid. Marks the pet as `adopted`.",
+            "description": "🛡️ Permission: `adoption.update`\n\nMarks the pet as `adopted`. Any adoption fee is settled offline at handover.",
             "header": [
               {
                 "key": "Content-Type",
@@ -4513,7 +4197,7 @@
           "name": "Cancel an approved adoption",
           "request": {
             "method": "PATCH",
-            "description": "🛡️ Permission: `adoption.update`\n\nOnly when no fee has been paid (refund first). The pet becomes `available` again.",
+            "description": "🛡️ Permission: `adoption.update`\n\nThe pet becomes `available` again.",
             "header": [
               {
                 "key": "Content-Type",
@@ -7024,7 +6708,7 @@
       "name": "Dashboard",
       "item": [
         {
-          "name": "Cards: users, bookings, revenue, adoption, reviews, inbox",
+          "name": "Cards: users, bookings, booking value, adoption, reviews, inbox",
           "request": {
             "method": "GET",
             "description": "🛡️ Permission: `dashboard.view`",
@@ -7044,19 +6728,19 @@
           }
         },
         {
-          "name": "Net revenue chart",
+          "name": "Completed bookings chart",
           "request": {
             "method": "GET",
-            "description": "🛡️ Permission: `dashboard.view`\n\nPayments minus refunds per day or month (business timezone), split into bookings and adoption fees. Missing periods are filled with 0.",
+            "description": "🛡️ Permission: `dashboard.view`\n\nCount and value (sum of booking totals, BDT) of completed bookings per day or month, by booking date. Missing periods are filled with 0.",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/dashboard/revenue",
+              "raw": "{{baseUrl}}/dashboard/booking-value",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "dashboard",
-                "revenue"
+                "booking-value"
               ],
               "variable": [],
               "query": [

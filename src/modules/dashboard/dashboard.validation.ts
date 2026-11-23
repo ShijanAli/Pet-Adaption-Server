@@ -12,7 +12,7 @@ const range = z
   });
 
 export const DashboardValidation = {
-  revenue: z
+  bookingValue: z
     .object({ from: date, to: date, groupBy: z.enum(['day', 'month']).default('day') })
     .refine((v) => v.from <= v.to, { path: ['to'], message: '`to` must be on or after `from`' })
     .refine((v) => v.groupBy === 'month' || diffInDays(v.from, v.to) <= 366, {
@@ -29,6 +29,6 @@ export const DashboardValidation = {
   }),
 };
 
-export type RevenueQuery = z.infer<typeof DashboardValidation.revenue>;
+export type BookingValueQuery = z.infer<typeof DashboardValidation.bookingValue>;
 export type RangeQuery = z.infer<typeof DashboardValidation.range>;
 export type TopServicesQuery = z.infer<typeof DashboardValidation.topServices>;

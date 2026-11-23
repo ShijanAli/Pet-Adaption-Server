@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const SettingValidation = {
   listQuery: z.object({
-    group: z.enum(['general', 'payment', 'booking', 'notification']).optional(),
+    group: z.enum(['general', 'booking', 'notification']).optional(),
   }),
 
   update: z.object({

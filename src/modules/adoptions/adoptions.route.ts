@@ -23,7 +23,7 @@ r.get(
 r.get(
   '/:id',
   {
-    summary: 'Adoption detail with payments',
+    summary: 'Adoption detail',
     access: { permissions: [P.ADOPTION.VIEW] },
     params: idParam,
   },
@@ -45,7 +45,7 @@ r.patch(
   '/:id/complete',
   {
     summary: 'Complete the adoption (handover)',
-    description: 'Requires the adoption fee to be fully paid. Marks the pet as `adopted`.',
+    description: 'Marks the pet as `adopted`. Any adoption fee is settled offline at handover.',
     access: { permissions: [P.ADOPTION.UPDATE] },
     params: idParam,
     body: AdoptionValidation.complete,
@@ -57,8 +57,7 @@ r.patch(
   '/:id/cancel',
   {
     summary: 'Cancel an approved adoption',
-    description:
-      'Only when no fee has been paid (refund first). The pet becomes `available` again.',
+    description: 'The pet becomes `available` again.',
     access: { permissions: [P.ADOPTION.UPDATE] },
     params: idParam,
     body: AdoptionValidation.cancel,

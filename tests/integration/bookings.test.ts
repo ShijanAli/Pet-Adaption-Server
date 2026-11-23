@@ -40,7 +40,7 @@ describe('Bookings — create', () => {
 
     expect(res.body.data).toMatchObject({
       status: 'pending',
-      paymentStatus: 'unpaid',
+
       bookingDate: date,
       startTime: '10:00',
       endTime: '11:00',
