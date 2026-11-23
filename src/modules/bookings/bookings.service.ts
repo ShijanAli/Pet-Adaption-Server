@@ -265,6 +265,15 @@ export const BookingService = {
       message: `${detail.service.name} on ${input.date} at ${input.startTime}`,
       data: { bookingNo: detail.bookingNo },
     });
+    notificationService.notifyAdmins(
+      {
+        type: 'booking.new',
+        title: `New booking ${detail.bookingNo}`,
+        message: `${detail.user.firstName} booked ${detail.service.name} for ${detail.pet.name} on ${input.date} at ${input.startTime}`,
+        data: { bookingNo: detail.bookingNo },
+      },
+      [booking.assignedStaffId],
+    );
     return detail;
   },
 
@@ -303,6 +312,15 @@ export const BookingService = {
       reason ?? 'Cancelled by customer',
     );
     notifyStatus(booking, 'cancelled', reason);
+    notificationService.notifyAdmins(
+      {
+        type: 'booking.cancelled_by_customer',
+        title: `Booking ${booking.bookingNo} cancelled by customer`,
+        message: `${booking.user.firstName} cancelled ${booking.service.name} for ${booking.pet.name}`,
+        data: { bookingNo: booking.bookingNo },
+      },
+      [booking.assignedStaffId],
+    );
     return getDetail({ id: booking.id });
   },
 

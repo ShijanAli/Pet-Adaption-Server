@@ -2,6 +2,7 @@ import type { ContactStatus } from '@generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 import { createCrudService } from '@/shared/crud/crud.factory';
 import { emailService } from '@/shared/services/email.service';
+import { notificationService } from '@/shared/services/notification.service';
 import { settingsService } from '@/shared/services/settings.service';
 import type { ContactInput, ContactListQuery } from './contact.validation';
 
@@ -19,6 +20,11 @@ export const ContactService = {
     const message = await prisma.contactMessage.create({ data: input });
     const adminEmail = await settingsService.get('admin_notification_email');
     emailService.queue({ email: adminEmail }, 'CONTACT_RECEIVED', input);
+    notificationService.notifyAdmins({
+      type: 'contact.new',
+      title: 'New contact message',
+      message: `${input.name}: ${input.subject}`,
+    });
     return { id: message.id };
   },
 

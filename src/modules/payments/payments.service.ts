@@ -188,6 +188,12 @@ const sendReceipt = async (paymentId: number) => {
     message: `${formatMoney(toNumber(full.amount), full.currency)} for ${reference}`,
     data: { transactionId: full.transactionId, reference },
   });
+  notificationService.notifyAdmins({
+    type: 'payment.received',
+    title: 'Payment received',
+    message: `${full.user.firstName} paid ${formatMoney(toNumber(full.amount), full.currency)} for ${reference}`,
+    data: { transactionId: full.transactionId, reference },
+  });
 };
 
 /* ───────────────────────── list helpers ───────────────────────── */

@@ -9,4 +9,4 @@ export const sumBy = <T>(items: T[], pick: (item: T) => number) =>
   round2(items.reduce((total, item) => total + pick(item), 0));
 
 export const formatMoney = (amount: number, currency: 'BDT' | 'USD' = 'BDT') =>
-  currency === 'USD' ? `$${amount.toFixed(2)}` : `৳${amount.toFixed(2)}`;
+  currency === 'USD' ? `$${amount.toFixed(2)}` : `$${amount.toFixed(2)}`;

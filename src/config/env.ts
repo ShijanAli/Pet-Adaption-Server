@@ -21,7 +21,9 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
   API_PREFIX: z.string().startsWith('/').default('/api/v1'),
   APP_NAME: z.string().default('Pet Adoption'),
-  SERVER_URL: z.url(),
+  // Origin only. Trailing slashes and an accidental "/api/v1" suffix are stripped,
+  // otherwise callback URLs become /api/v1/api/v1/... (404).
+  SERVER_URL: z.url().transform((u) => u.replace(/\/+$/, '').replace(/\/api\/v\d+$/, '')),
   CLIENT_URL: z.url(),
   CLIENT_URLS: csv,
   BUSINESS_TIMEZONE: z
